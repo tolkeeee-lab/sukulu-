@@ -27,7 +27,7 @@ export default async function AccueilPage() {
     .eq('id', user.id)
     .single()
 
-  if (!profile?.school_id) redirect('/login')
+  if (!profile?.school_id) redirect('/dashboard/setup')
 
   const schoolId = profile.school_id as string
   const school = profile.schools as { name: string } | null

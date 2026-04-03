@@ -31,6 +31,13 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
+  // Special handling: /dashboard/setup is always accessible to authenticated users.
+  // This prevents an infinite redirect loop where a user without a school_id would be
+  // bounced between /dashboard/accueil → /login → /dashboard → /dashboard/accueil.
+  if (user && pathname === '/dashboard/setup') {
+    return supabaseResponse
+  }
+
   // Redirect to /login if not authenticated and trying to access /dashboard/*
   if (!user && pathname.startsWith('/dashboard')) {
     const url = request.nextUrl.clone()
