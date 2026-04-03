@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 
+export const dynamic = 'force-dynamic'
+
 type Step = 'school' | 'director'
 
 export default function RegisterPage() {
