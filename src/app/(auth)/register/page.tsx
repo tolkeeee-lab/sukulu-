@@ -1,16 +1,16 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
+
+export const dynamic = 'force-dynamic'
 
 type Step = 'school' | 'director'
 
 export default function RegisterPage() {
   const router = useRouter()
   const [step, setStep] = useState<Step>('school')
-
-  // School fields
   const [schoolName, setSchoolName] = useState('')
   const [schoolCode, setSchoolCode] = useState('')
   const [schoolAddress, setSchoolAddress] = useState('')
@@ -25,15 +25,7 @@ export default function RegisterPage() {
 
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-
-  const supabase = useMemo(
-    () =>
-      createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      ),
-    []
-  )
+  const supabaseRef = useRef<ReturnType<typeof createBrowserClient> | null>(null)
 
   function handleNextStep(e: React.FormEvent) {
     e.preventDefault()
@@ -47,49 +39,40 @@ export default function RegisterPage() {
     setLoading(true)
 
     try {
-      // 1. Create auth user
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
+      // Appel à la Route API sécurisée
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schoolName,
+          schoolCode,
+          schoolAddress,
+          schoolPhone,
+          fullName,
+          email,
+          password,
+          directorPhone,
+        }),
       })
 
-      if (signUpError || !authData.user) {
-        setError(signUpError?.message ?? 'Erreur lors de la création du compte.')
+      const result = await res.json()
+
+      if (!res.ok) {
+        setError(result.error ?? "Erreur lors de l'inscription.")
         return
       }
 
-      const userId = authData.user.id
-
-      // 2. Insert school
-      const { data: schoolData, error: schoolError } = await supabase
-        .from('schools')
-        .insert({
-          name: schoolName,
-          code: schoolCode.toUpperCase(),
-          address: schoolAddress || null,
-          phone: schoolPhone || null,
-          plan: 'free',
-          billing_status: 'active',
-        })
-        .select('id')
-        .single()
-
-      if (schoolError || !schoolData) {
-        setError("Erreur lors de l'inscription de l'école. Le code école est peut-être déjà utilisé.")
-        return
+      // Connecter l'utilisateur après inscription réussie
+      if (!supabaseRef.current) {
+        supabaseRef.current = createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        )
       }
-
-      // 3. Insert director profile
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: userId,
-        school_id: schoolData.id,
-        full_name: fullName,
-        role: 'director',
-        phone: directorPhone || null,
-      })
-
-      if (profileError) {
-        setError('Erreur lors de la création du profil directeur.')
+      const { error: signInError } = await supabaseRef.current.auth.signInWithPassword({ email, password })
+      if (signInError) {
+        setError('Compte créé, mais erreur de connexion automatique. Veuillez vous connecter manuellement.')
+        router.push('/login')
         return
       }
 
