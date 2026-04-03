@@ -23,6 +23,10 @@ interface Props {
   notificationsNonLues: number
 }
 
+function pluralize(count: number, singular: string, plural: string): string {
+  return count > 1 ? plural : singular
+}
+
 function formatMontant(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M'
   if (n >= 1_000) return (n / 1_000).toFixed(0) + 'k'
@@ -88,7 +92,7 @@ export default function DashboardDirecteurClient({
             borderRadius: 20, padding: '4px 12px', fontSize: 12, color: '#c05621',
           }}>
             <span>🔔</span>
-            <span>{notificationsNonLues} notification{notificationsNonLues > 1 ? 's' : ''} non lue{notificationsNonLues > 1 ? 's' : ''}</span>
+            <span>{notificationsNonLues} {pluralize(notificationsNonLues, 'notification non lue', 'notifications non lues')}</span>
           </div>
         )}
       </div>

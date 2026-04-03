@@ -2,12 +2,18 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import DashboardDirecteurClient from './DashboardDirecteurClient'
 
+function getTeacherName(profiles: { full_name: string }[] | { full_name: string } | null): string {
+  if (!profiles) return '—'
+  if (Array.isArray(profiles)) return profiles[0]?.full_name ?? '—'
+  return profiles.full_name
+}
+
 function getCurrentSchoolYear(): string {
   const now = new Date()
   const year = now.getFullYear()
   const month = now.getMonth() + 1
-  if (month >= 9) return year + '-' + (year + 1)
-  return (year - 1) + '-' + year
+  if (month >= 9) return `${year}-${year + 1}`
+  return `${year - 1}-${year}`
 }
 
 export default async function AccueilPage() {
@@ -77,7 +83,7 @@ export default async function AccueilPage() {
     id: c.id,
     name: c.name,
     totalEleves: 0,
-    enseignant: Array.isArray(c.profiles) ? (c.profiles[0]?.full_name ?? '—') : (c.profiles?.full_name ?? '—'),
+    enseignant: getTeacherName(c.profiles),
     moyenne: null as number | null,
   }))
 
