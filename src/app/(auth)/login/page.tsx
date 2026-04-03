@@ -261,7 +261,7 @@ export default function LoginPage() {
           </button>
 
           {/* Forgot password */}
-          <div style={{ textAlign: 'center' }}>
+          <div style={{ textAlign: 'center', marginBottom: 16 }}>
             <button
               type="button"
               onClick={() => alert('Fonctionnalité bientôt disponible.')}
@@ -276,6 +276,17 @@ export default function LoginPage() {
             >
               Mot de passe oublié ?
             </button>
+          </div>
+
+          {/* Register link */}
+          <div style={{ textAlign: 'center', fontSize: 13, color: '#6b7280' }}>
+            Pas encore inscrit ?{' '}
+            <a
+              href="/register"
+              style={{ color: '#1B4332', fontWeight: 600, textDecoration: 'underline' }}
+            >
+              Inscrire votre école
+            </a>
           </div>
         </form>
       </div>
