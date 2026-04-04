@@ -23,6 +23,26 @@ ALTER TABLE notifications   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs      ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
+-- FONCTIONS HELPER (SECURITY DEFINER)
+-- Évitent la récursivité infinie des policies RLS sur `profiles`.
+-- Les sous-requêtes directes `(SELECT school_id FROM profiles WHERE …)`
+-- déclenchent à nouveau les policies RLS de `profiles`, provoquant
+-- une récursion. Les fonctions SECURITY DEFINER contournent le RLS
+-- lors de leur propre exécution, cassant la récursion.
+-- ============================================================
+CREATE OR REPLACE FUNCTION get_my_school_id()
+RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+  SELECT school_id FROM profiles WHERE id = auth.uid() LIMIT 1
+$$;
+
+CREATE OR REPLACE FUNCTION get_my_role()
+RETURNS text LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+  SELECT role FROM profiles WHERE id = auth.uid() LIMIT 1
+$$;
+
+-- ============================================================
 -- TABLE : schools
 -- ============================================================
 DROP POLICY IF EXISTS "schools_select_members"  ON schools;
@@ -31,17 +51,18 @@ DROP POLICY IF EXISTS "schools_update_director" ON schools;
 -- Tous les membres de l'école peuvent lire les informations de leur établissement
 CREATE POLICY "schools_select_members" ON schools
   FOR SELECT
-  USING (
-    id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-  );
+  USING (id = get_my_school_id());
 
 -- Seul le directeur peut modifier les informations de l'école
 CREATE POLICY "schools_update_director" ON schools
   FOR UPDATE
   USING (
-    id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'director'
+    id = get_my_school_id()
+    AND get_my_role() = 'director'
   );
+
+-- Note : INSERT sur schools est réservé au service_role (inscription via /api/register).
+-- Aucune policy INSERT = rejet automatique pour les utilisateurs normaux.
 
 -- ============================================================
 -- TABLE : profiles
@@ -53,11 +74,10 @@ DROP POLICY IF EXISTS "profiles_update_director_admin" ON profiles;
 DROP POLICY IF EXISTS "profiles_update_own"            ON profiles;
 
 -- Tous les membres de la même école peuvent voir les profils
+-- Utilise get_my_school_id() (SECURITY DEFINER) pour éviter la récursivité
 CREATE POLICY "profiles_select_same_school" ON profiles
   FOR SELECT
-  USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-  );
+  USING (school_id = get_my_school_id());
 
 -- Un utilisateur peut toujours voir son propre profil
 CREATE POLICY "profiles_select_own" ON profiles
@@ -67,16 +87,14 @@ CREATE POLICY "profiles_select_own" ON profiles
 -- Seuls le directeur et le super_admin peuvent créer des profils
 CREATE POLICY "profiles_insert_director_admin" ON profiles
   FOR INSERT
-  WITH CHECK (
-    (SELECT role FROM profiles WHERE id = auth.uid()) IN ('director','super_admin')
-  );
+  WITH CHECK (get_my_role() IN ('director','super_admin'));
 
 -- Seuls le directeur et le super_admin peuvent modifier les profils
 CREATE POLICY "profiles_update_director_admin" ON profiles
   FOR UPDATE
   USING (
-    (SELECT role FROM profiles WHERE id = auth.uid()) IN ('director','super_admin')
-    AND school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
+    get_my_role() IN ('director','super_admin')
+    AND school_id = get_my_school_id()
   );
 
 -- Un utilisateur peut toujours modifier son propre profil
@@ -95,29 +113,24 @@ DROP POLICY IF EXISTS "classes_delete_director_teacher"    ON classes;
 -- Tous les membres de la même école peuvent voir les classes
 CREATE POLICY "classes_select_same_school" ON classes
   FOR SELECT
-  USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-  );
+  USING (school_id = get_my_school_id());
 
 -- Le directeur et les enseignants peuvent créer des classes
 CREATE POLICY "classes_insert_director_teacher" ON classes
   FOR INSERT
   WITH CHECK (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) IN ('director','teacher')
+    school_id = get_my_school_id()
+    AND get_my_role() IN ('director','teacher')
   );
 
 -- Le directeur peut modifier toutes les classes ; un enseignant uniquement ses propres classes
 CREATE POLICY "classes_update_director_teacher" ON classes
   FOR UPDATE
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
+    school_id = get_my_school_id()
     AND (
-      (SELECT role FROM profiles WHERE id = auth.uid()) = 'director'
-      OR (
-        (SELECT role FROM profiles WHERE id = auth.uid()) = 'teacher'
-        AND teacher_id = auth.uid()
-      )
+      get_my_role() = 'director'
+      OR (get_my_role() = 'teacher' AND teacher_id = auth.uid())
     )
   );
 
@@ -125,13 +138,10 @@ CREATE POLICY "classes_update_director_teacher" ON classes
 CREATE POLICY "classes_delete_director_teacher" ON classes
   FOR DELETE
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
+    school_id = get_my_school_id()
     AND (
-      (SELECT role FROM profiles WHERE id = auth.uid()) = 'director'
-      OR (
-        (SELECT role FROM profiles WHERE id = auth.uid()) = 'teacher'
-        AND teacher_id = auth.uid()
-      )
+      get_my_role() = 'director'
+      OR (get_my_role() = 'teacher' AND teacher_id = auth.uid())
     )
   );
 
@@ -146,29 +156,24 @@ DROP POLICY IF EXISTS "subjects_delete_director_teacher" ON subjects;
 -- Tous les membres de la même école peuvent voir les matières
 CREATE POLICY "subjects_select_same_school" ON subjects
   FOR SELECT
-  USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-  );
+  USING (school_id = get_my_school_id());
 
 -- Le directeur et les enseignants assignés peuvent créer des matières
 CREATE POLICY "subjects_insert_director_teacher" ON subjects
   FOR INSERT
   WITH CHECK (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) IN ('director','teacher')
+    school_id = get_my_school_id()
+    AND get_my_role() IN ('director','teacher')
   );
 
 -- Le directeur peut modifier toutes les matières ; un enseignant uniquement les siennes
 CREATE POLICY "subjects_update_director_teacher" ON subjects
   FOR UPDATE
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
+    school_id = get_my_school_id()
     AND (
-      (SELECT role FROM profiles WHERE id = auth.uid()) = 'director'
-      OR (
-        (SELECT role FROM profiles WHERE id = auth.uid()) = 'teacher'
-        AND teacher_id = auth.uid()
-      )
+      get_my_role() = 'director'
+      OR (get_my_role() = 'teacher' AND teacher_id = auth.uid())
     )
   );
 
@@ -176,13 +181,10 @@ CREATE POLICY "subjects_update_director_teacher" ON subjects
 CREATE POLICY "subjects_delete_director_teacher" ON subjects
   FOR DELETE
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
+    school_id = get_my_school_id()
     AND (
-      (SELECT role FROM profiles WHERE id = auth.uid()) = 'director'
-      OR (
-        (SELECT role FROM profiles WHERE id = auth.uid()) = 'teacher'
-        AND teacher_id = auth.uid()
-      )
+      get_my_role() = 'director'
+      OR (get_my_role() = 'teacher' AND teacher_id = auth.uid())
     )
   );
 
@@ -199,16 +201,16 @@ DROP POLICY IF EXISTS "students_delete_director_only"       ON students;
 CREATE POLICY "students_select_same_school" ON students
   FOR SELECT
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) IN ('director','accountant','teacher')
+    school_id = get_my_school_id()
+    AND get_my_role() IN ('director','accountant','teacher')
   );
 
 -- Un parent ne voit que ses propres enfants
 CREATE POLICY "students_select_parent_own_children" ON students
   FOR SELECT
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'parent'
+    school_id = get_my_school_id()
+    AND get_my_role() = 'parent'
     AND parent_id = auth.uid()
   );
 
@@ -216,24 +218,24 @@ CREATE POLICY "students_select_parent_own_children" ON students
 CREATE POLICY "students_insert_director_accountant" ON students
   FOR INSERT
   WITH CHECK (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) IN ('director','accountant')
+    school_id = get_my_school_id()
+    AND get_my_role() IN ('director','accountant')
   );
 
 -- Le directeur et le comptable peuvent modifier les dossiers des élèves
 CREATE POLICY "students_update_director_accountant" ON students
   FOR UPDATE
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) IN ('director','accountant')
+    school_id = get_my_school_id()
+    AND get_my_role() IN ('director','accountant')
   );
 
 -- Seul le directeur peut archiver (soft delete) un élève
 CREATE POLICY "students_delete_director_only" ON students
   FOR DELETE
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'director'
+    school_id = get_my_school_id()
+    AND get_my_role() = 'director'
   );
 
 -- ============================================================
@@ -250,13 +252,10 @@ DROP POLICY IF EXISTS "grades_delete_director_only"       ON grades;
 CREATE POLICY "grades_select_director_teacher" ON grades
   FOR SELECT
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
+    school_id = get_my_school_id()
     AND (
-      (SELECT role FROM profiles WHERE id = auth.uid()) = 'director'
-      OR (
-        (SELECT role FROM profiles WHERE id = auth.uid()) = 'teacher'
-        AND teacher_id = auth.uid()
-      )
+      get_my_role() = 'director'
+      OR (get_my_role() = 'teacher' AND teacher_id = auth.uid())
     )
   );
 
@@ -264,8 +263,8 @@ CREATE POLICY "grades_select_director_teacher" ON grades
 CREATE POLICY "grades_select_parent_own_children" ON grades
   FOR SELECT
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'parent'
+    school_id = get_my_school_id()
+    AND get_my_role() = 'parent'
     AND student_id IN (
       SELECT id FROM students WHERE parent_id = auth.uid()
     )
@@ -275,8 +274,8 @@ CREATE POLICY "grades_select_parent_own_children" ON grades
 CREATE POLICY "grades_select_student_own" ON grades
   FOR SELECT
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'student'
+    school_id = get_my_school_id()
+    AND get_my_role() = 'student'
     AND student_id IN (
       SELECT id FROM students WHERE profile_id = auth.uid()
     )
@@ -286,8 +285,8 @@ CREATE POLICY "grades_select_student_own" ON grades
 CREATE POLICY "grades_insert_teacher_only" ON grades
   FOR INSERT
   WITH CHECK (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'teacher'
+    school_id = get_my_school_id()
+    AND get_my_role() = 'teacher'
     AND teacher_id = auth.uid()
   );
 
@@ -295,8 +294,8 @@ CREATE POLICY "grades_insert_teacher_only" ON grades
 CREATE POLICY "grades_update_teacher_only" ON grades
   FOR UPDATE
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'teacher'
+    school_id = get_my_school_id()
+    AND get_my_role() = 'teacher'
     AND teacher_id = auth.uid()
   );
 
@@ -304,8 +303,8 @@ CREATE POLICY "grades_update_teacher_only" ON grades
 CREATE POLICY "grades_delete_director_only" ON grades
   FOR DELETE
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'director'
+    school_id = get_my_school_id()
+    AND get_my_role() = 'director'
   );
 
 -- ============================================================
@@ -322,11 +321,11 @@ DROP POLICY IF EXISTS "attendances_delete_director_only"       ON attendances;
 CREATE POLICY "attendances_select_director_teacher" ON attendances
   FOR SELECT
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
+    school_id = get_my_school_id()
     AND (
-      (SELECT role FROM profiles WHERE id = auth.uid()) = 'director'
+      get_my_role() = 'director'
       OR (
-        (SELECT role FROM profiles WHERE id = auth.uid()) = 'teacher'
+        get_my_role() = 'teacher'
         AND class_id IN (
           SELECT id FROM classes WHERE teacher_id = auth.uid()
         )
@@ -338,8 +337,8 @@ CREATE POLICY "attendances_select_director_teacher" ON attendances
 CREATE POLICY "attendances_select_parent_own_children" ON attendances
   FOR SELECT
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'parent'
+    school_id = get_my_school_id()
+    AND get_my_role() = 'parent'
     AND student_id IN (
       SELECT id FROM students WHERE parent_id = auth.uid()
     )
@@ -349,8 +348,8 @@ CREATE POLICY "attendances_select_parent_own_children" ON attendances
 CREATE POLICY "attendances_select_student_own" ON attendances
   FOR SELECT
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'student'
+    school_id = get_my_school_id()
+    AND get_my_role() = 'student'
     AND student_id IN (
       SELECT id FROM students WHERE profile_id = auth.uid()
     )
@@ -360,8 +359,8 @@ CREATE POLICY "attendances_select_student_own" ON attendances
 CREATE POLICY "attendances_insert_teacher_only" ON attendances
   FOR INSERT
   WITH CHECK (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'teacher'
+    school_id = get_my_school_id()
+    AND get_my_role() = 'teacher'
     AND class_id IN (
       SELECT id FROM classes WHERE teacher_id = auth.uid()
     )
@@ -371,8 +370,8 @@ CREATE POLICY "attendances_insert_teacher_only" ON attendances
 CREATE POLICY "attendances_update_teacher_only" ON attendances
   FOR UPDATE
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'teacher'
+    school_id = get_my_school_id()
+    AND get_my_role() = 'teacher'
     AND class_id IN (
       SELECT id FROM classes WHERE teacher_id = auth.uid()
     )
@@ -382,8 +381,8 @@ CREATE POLICY "attendances_update_teacher_only" ON attendances
 CREATE POLICY "attendances_delete_director_only" ON attendances
   FOR DELETE
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'director'
+    school_id = get_my_school_id()
+    AND get_my_role() = 'director'
   );
 
 -- ============================================================
@@ -397,21 +396,16 @@ DROP POLICY IF EXISTS "assignments_delete_director_teacher"    ON assignments;
 -- Tous les membres de la même école voient les devoirs
 CREATE POLICY "assignments_select_same_school" ON assignments
   FOR SELECT
-  USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-  );
+  USING (school_id = get_my_school_id());
 
 -- Le directeur et l'enseignant assigné peuvent créer des devoirs
 CREATE POLICY "assignments_insert_director_teacher" ON assignments
   FOR INSERT
   WITH CHECK (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
+    school_id = get_my_school_id()
     AND (
-      (SELECT role FROM profiles WHERE id = auth.uid()) = 'director'
-      OR (
-        (SELECT role FROM profiles WHERE id = auth.uid()) = 'teacher'
-        AND teacher_id = auth.uid()
-      )
+      get_my_role() = 'director'
+      OR (get_my_role() = 'teacher' AND teacher_id = auth.uid())
     )
   );
 
@@ -419,13 +413,10 @@ CREATE POLICY "assignments_insert_director_teacher" ON assignments
 CREATE POLICY "assignments_update_director_teacher" ON assignments
   FOR UPDATE
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
+    school_id = get_my_school_id()
     AND (
-      (SELECT role FROM profiles WHERE id = auth.uid()) = 'director'
-      OR (
-        (SELECT role FROM profiles WHERE id = auth.uid()) = 'teacher'
-        AND teacher_id = auth.uid()
-      )
+      get_my_role() = 'director'
+      OR (get_my_role() = 'teacher' AND teacher_id = auth.uid())
     )
   );
 
@@ -433,13 +424,10 @@ CREATE POLICY "assignments_update_director_teacher" ON assignments
 CREATE POLICY "assignments_delete_director_teacher" ON assignments
   FOR DELETE
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
+    school_id = get_my_school_id()
     AND (
-      (SELECT role FROM profiles WHERE id = auth.uid()) = 'director'
-      OR (
-        (SELECT role FROM profiles WHERE id = auth.uid()) = 'teacher'
-        AND teacher_id = auth.uid()
-      )
+      get_my_role() = 'director'
+      OR (get_my_role() = 'teacher' AND teacher_id = auth.uid())
     )
   );
 
@@ -455,32 +443,32 @@ DROP POLICY IF EXISTS "fee_types_delete_director_only"       ON fee_types;
 CREATE POLICY "fee_types_select_director_accountant" ON fee_types
   FOR SELECT
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) IN ('director','accountant')
+    school_id = get_my_school_id()
+    AND get_my_role() IN ('director','accountant')
   );
 
 -- Seul le directeur peut créer des types de frais
 CREATE POLICY "fee_types_insert_director_only" ON fee_types
   FOR INSERT
   WITH CHECK (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'director'
+    school_id = get_my_school_id()
+    AND get_my_role() = 'director'
   );
 
 -- Seul le directeur peut modifier les types de frais
 CREATE POLICY "fee_types_update_director_only" ON fee_types
   FOR UPDATE
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'director'
+    school_id = get_my_school_id()
+    AND get_my_role() = 'director'
   );
 
 -- Seul le directeur peut supprimer des types de frais
 CREATE POLICY "fee_types_delete_director_only" ON fee_types
   FOR DELETE
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'director'
+    school_id = get_my_school_id()
+    AND get_my_role() = 'director'
   );
 
 -- ============================================================
@@ -496,16 +484,16 @@ DROP POLICY IF EXISTS "payments_delete_director_only"         ON payments;
 CREATE POLICY "payments_select_director_accountant" ON payments
   FOR SELECT
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) IN ('director','accountant')
+    school_id = get_my_school_id()
+    AND get_my_role() IN ('director','accountant')
   );
 
 -- Un parent voit les paiements de ses enfants
 CREATE POLICY "payments_select_parent_own_children" ON payments
   FOR SELECT
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'parent'
+    school_id = get_my_school_id()
+    AND get_my_role() = 'parent'
     AND student_id IN (
       SELECT id FROM students WHERE parent_id = auth.uid()
     )
@@ -515,24 +503,24 @@ CREATE POLICY "payments_select_parent_own_children" ON payments
 CREATE POLICY "payments_insert_director_accountant" ON payments
   FOR INSERT
   WITH CHECK (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) IN ('director','accountant')
+    school_id = get_my_school_id()
+    AND get_my_role() IN ('director','accountant')
   );
 
 -- Seul le directeur peut modifier un paiement enregistré
 CREATE POLICY "payments_update_director_only" ON payments
   FOR UPDATE
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'director'
+    school_id = get_my_school_id()
+    AND get_my_role() = 'director'
   );
 
 -- Seul le directeur peut supprimer un paiement
 CREATE POLICY "payments_delete_director_only" ON payments
   FOR DELETE
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'director'
+    school_id = get_my_school_id()
+    AND get_my_role() = 'director'
   );
 
 -- ============================================================
@@ -547,24 +535,24 @@ DROP POLICY IF EXISTS "payroll_update_status_director_only" ON payroll;
 CREATE POLICY "payroll_select_director_accountant" ON payroll
   FOR SELECT
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) IN ('director','accountant')
+    school_id = get_my_school_id()
+    AND get_my_role() IN ('director','accountant')
   );
 
 -- Le comptable et le directeur peuvent créer des fiches de salaire
 CREATE POLICY "payroll_insert_accountant" ON payroll
   FOR INSERT
   WITH CHECK (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) IN ('accountant','director')
+    school_id = get_my_school_id()
+    AND get_my_role() IN ('accountant','director')
   );
 
 -- Le comptable peut modifier les salaires en attente
 CREATE POLICY "payroll_update_accountant" ON payroll
   FOR UPDATE
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'accountant'
+    school_id = get_my_school_id()
+    AND get_my_role() = 'accountant'
     AND status IN ('pending','awaiting_approval')
   );
 
@@ -572,8 +560,8 @@ CREATE POLICY "payroll_update_accountant" ON payroll
 CREATE POLICY "payroll_update_status_director_only" ON payroll
   FOR UPDATE
   USING (
-    school_id = (SELECT school_id FROM profiles WHERE id = auth.uid())
-    AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'director'
+    school_id = get_my_school_id()
+    AND get_my_role() = 'director'
   );
 
 -- ============================================================
@@ -618,16 +606,24 @@ CREATE POLICY "notifications_update_own" ON notifications
 -- ============================================================
 -- TABLE : audit_logs
 -- ============================================================
-DROP POLICY IF EXISTS "audit_insert_only" ON audit_logs;
+DROP POLICY IF EXISTS "audit_insert_only"          ON audit_logs;
+DROP POLICY IF EXISTS "audit_logs_select_director" ON audit_logs;
 
 -- Seuls les utilisateurs authentifiés peuvent insérer dans les logs d'audit
--- La lecture est réservée au service_role (aucune policy SELECT)
 CREATE POLICY "audit_insert_only" ON audit_logs
   FOR INSERT
   WITH CHECK (auth.uid() IS NOT NULL);
 
+-- Le directeur de l'école peut lire les logs d'audit de son établissement
+CREATE POLICY "audit_logs_select_director" ON audit_logs
+  FOR SELECT
+  USING (
+    school_id = get_my_school_id()
+    AND get_my_role() = 'director'
+  );
+
 -- ============================================================
 -- FIN DES POLICIES RLS
--- SELECT/UPDATE/DELETE sur audit_logs uniquement via service_role
 -- INSERT sur otp_validations et notifications uniquement via service_role
+-- INSERT sur schools uniquement via service_role (inscription /api/register)
 -- ============================================================
