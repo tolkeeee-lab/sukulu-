@@ -15,13 +15,22 @@ export async function POST(request: Request) {
     if (!schoolName || typeof schoolName !== 'string' || schoolName.trim().length === 0) {
       return NextResponse.json({ error: "Le nom de l'école est obligatoire." }, { status: 400 })
     }
-    if (!schoolCode || typeof schoolCode !== 'string' || !/^[A-Z0-9\-]{2,20}$/i.test(schoolCode.trim())) {
+    if (!schoolCode || typeof schoolCode !== 'string' || !/^[a-zA-Z0-9-]{2,20}$/.test(schoolCode.trim())) {
       return NextResponse.json({ error: 'Le code école doit faire entre 2 et 20 caractères (lettres, chiffres, tirets).' }, { status: 400 })
     }
     if (!fullName || typeof fullName !== 'string' || fullName.trim().length === 0) {
       return NextResponse.json({ error: 'Le nom du directeur est obligatoire.' }, { status: 400 })
     }
-    if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    // Validation email sans regex backtracking (évite ReDoS)
+    const emailStr = typeof email === 'string' ? email.trim() : ''
+    const atIndex = emailStr.indexOf('@')
+    const isValidEmail =
+      emailStr.length > 0 &&
+      emailStr.length <= 254 &&
+      atIndex > 0 &&
+      atIndex === emailStr.lastIndexOf('@') &&
+      emailStr.slice(atIndex + 1).includes('.')
+    if (!isValidEmail) {
       return NextResponse.json({ error: 'Adresse email invalide.' }, { status: 400 })
     }
     if (!password || typeof password !== 'string' || password.length < 8) {

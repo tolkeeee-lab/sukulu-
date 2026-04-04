@@ -14,13 +14,15 @@ export default async function DashboardLayout({
   let role = ''
 
   if (user) {
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('full_name, role')
       .eq('id', user.id)
       .single()
-    fullName = profile?.full_name ?? ''
-    role = profile?.role ?? ''
+    if (!profileError && profile) {
+      fullName = profile.full_name ?? ''
+      role = profile.role ?? ''
+    }
   }
 
   return (
