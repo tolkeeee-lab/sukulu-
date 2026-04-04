@@ -3,6 +3,11 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
+interface SidebarProps {
+  fullName: string
+  role: string
+}
+
 interface NavItem {
   icon: string
   label: string
@@ -30,7 +35,7 @@ const navSections: NavSection[] = [
   {
     title: 'Administration',
     items: [
-      { icon: '💰', label: 'Finances', href: '/dashboard/employes' },
+      { icon: '💰', label: 'Finances', href: '/dashboard/finances' },
       { icon: '👥', label: 'Personnel', href: '/dashboard/personnel' },
       { icon: '💬', label: 'Messages', href: '/dashboard/messages' },
       { icon: '🤝', label: 'Délégation', href: '/dashboard/delegation' },
@@ -44,7 +49,38 @@ const bottomItems: NavItem[] = [
   { icon: '🚪', label: 'Déconnexion', href: '/auth/signout' },
 ]
 
-export default function Sidebar() {
+function getRoleLabel(role: string): string {
+  const map: Record<string, string> = {
+    director: 'Directeur',
+    teacher: 'Enseignant',
+    accountant: 'Comptable',
+    parent: 'Parent',
+    student: 'Élève',
+    super_admin: 'Super Admin',
+  }
+  return map[role] ?? role
+}
+
+function getRoleIcon(role: string): string {
+  const map: Record<string, string> = {
+    director: '👑',
+    teacher: '📚',
+    accountant: '💼',
+    parent: '👪',
+    student: '🎒',
+    super_admin: '⭐',
+  }
+  return map[role] ?? '👤'
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0][0].toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+export default function Sidebar({ fullName, role }: SidebarProps) {
   const pathname = usePathname()
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
@@ -80,7 +116,7 @@ export default function Sidebar() {
         flexShrink: 0,
       }}
     >
-      {/* Director card */}
+      {/* User card */}
       <div
         style={{
           background: 'linear-gradient(135deg, #1B4332 0%, #40916C 100%)',
@@ -107,23 +143,25 @@ export default function Sidebar() {
             flexShrink: 0,
           }}
         >
-          KD
+          {getInitials(fullName)}
         </div>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#ffffff' }}>M. Komlan</div>
-          <div
-            style={{
-              fontSize: 10,
-              color: 'rgba(255,255,255,0.70)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 3,
-              marginTop: 1,
-            }}
-          >
-            <span>👑</span>
-            <span>Directeur</span>
-          </div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#ffffff' }}>{fullName || '—'}</div>
+          {role && (
+            <div
+              style={{
+                fontSize: 10,
+                color: 'rgba(255,255,255,0.70)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 3,
+                marginTop: 1,
+              }}
+            >
+              <span>{getRoleIcon(role)}</span>
+              <span>{getRoleLabel(role)}</span>
+            </div>
+          )}
         </div>
       </div>
 

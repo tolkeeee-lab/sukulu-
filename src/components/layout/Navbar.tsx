@@ -1,6 +1,42 @@
 'use client'
 
-export default function Navbar() {
+interface NavbarProps {
+  fullName: string
+  role: string
+}
+
+function getRoleLabel(role: string): string {
+  const map: Record<string, string> = {
+    director: 'Directeur',
+    teacher: 'Enseignant',
+    accountant: 'Comptable',
+    parent: 'Parent',
+    student: 'Élève',
+    super_admin: 'Super Admin',
+  }
+  return map[role] ?? role
+}
+
+function getRoleIcon(role: string): string {
+  const map: Record<string, string> = {
+    director: '👑',
+    teacher: '📚',
+    accountant: '💼',
+    parent: '👪',
+    student: '🎒',
+    super_admin: '⭐',
+  }
+  return map[role] ?? '👤'
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0][0].toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+export default function Navbar({ fullName, role }: NavbarProps) {
   return (
     <header
       style={{
@@ -51,29 +87,31 @@ export default function Navbar() {
 
       {/* Right side */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {/* Role badge */}
-        <div
-          style={{
-            background: 'rgba(244,162,97,0.18)',
-            border: '1px solid rgba(244,162,97,0.35)',
-            borderRadius: 20,
-            padding: '3px 10px',
-            fontSize: 11,
-            color: '#F4A261',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-          }}
-        >
-          <span>👑</span>
-          <span>Directeur</span>
-        </div>
+        {role && (
+          <div
+            style={{
+              background: 'rgba(244,162,97,0.18)',
+              border: '1px solid rgba(244,162,97,0.35)',
+              borderRadius: 20,
+              padding: '3px 10px',
+              fontSize: 11,
+              color: '#F4A261',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            <span>{getRoleIcon(role)}</span>
+            <span>{getRoleLabel(role)}</span>
+          </div>
+        )}
 
-        {/* Name */}
-        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 400 }}>
-          M. Komlan
-        </span>
+        {fullName && (
+          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 400 }}>
+            {fullName}
+          </span>
+        )}
 
         {/* Avatar */}
         <div
@@ -92,7 +130,7 @@ export default function Navbar() {
             flexShrink: 0,
           }}
         >
-          KD
+          {getInitials(fullName)}
         </div>
       </div>
     </header>
