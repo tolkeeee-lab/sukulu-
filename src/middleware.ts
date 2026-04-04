@@ -31,24 +31,27 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // Special handling: /dashboard/setup is always accessible to authenticated users.
-  // This prevents an infinite redirect loop where a user without a school_id would be
-  // bounced between /dashboard/accueil → /login → /dashboard → /dashboard/accueil.
+  // Routes publiques : ne jamais rediriger
+  if (pathname.startsWith('/auth/signout')) {
+    return supabaseResponse
+  }
+
+  // /dashboard/setup accessible aux utilisateurs connectés sans école
   if (user && pathname === '/dashboard/setup') {
     return supabaseResponse
   }
 
-  // Redirect to /login if not authenticated and trying to access /dashboard/*
+  // Non connecté → redirige vers /login si essaie d'accéder au dashboard
   if (!user && pathname.startsWith('/dashboard')) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // Redirect authenticated users away from /login and /register
+  // Connecté → redirige vers /dashboard/accueil si essaie d'aller sur /login ou /register
   if (user && (pathname === '/login' || pathname === '/register')) {
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
+    url.pathname = '/dashboard/accueil'
     return NextResponse.redirect(url)
   }
 

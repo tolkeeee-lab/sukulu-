@@ -41,7 +41,7 @@ const navSections: NavSection[] = [
 const bottomItems: NavItem[] = [
   { icon: '📅', label: 'Emploi du temps', href: '/dashboard/emploi-du-temps' },
   { icon: '⚙️', label: 'Paramètres', href: '/dashboard/parametres' },
-  { icon: '🚪', label: 'Déconnexion', href: '/login' },
+  { icon: '🚪', label: 'Déconnexion', href: '/auth/signout' },
 ]
 
 export default function Sidebar() {
@@ -158,10 +158,17 @@ export default function Sidebar() {
       {/* Bottom items */}
       <div style={{ padding: '4px 8px 12px', borderTop: '1px solid #f0faf3' }}>
         {bottomItems.map((item) => (
-          <Link key={item.href} href={item.href} style={navItemStyle(item.href)}>
+          <a
+            key={item.href}
+            href={item.href}
+            style={{
+              ...navItemStyle(item.href),
+              ...(item.href === '/auth/signout' ? { color: '#dc2626' } : {}),
+            }}
+          >
             <span style={{ fontSize: 14 }}>{item.icon}</span>
             <span>{item.label}</span>
-          </Link>
+          </a>
         ))}
       </div>
     </aside>
