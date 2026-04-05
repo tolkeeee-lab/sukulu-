@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Navbar from '@/components/layout/Navbar'
 import Sidebar from '@/components/layout/Sidebar'
@@ -10,26 +9,31 @@ export default async function DashboardLayout({
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, role, school_id')
-    .eq('id', user.id)
-    .single()
+  let fullName = ''
+  let role = ''
 
-  if (!profile?.school_id) redirect('/dashboard/setup')
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name, role')
+      .eq('id', user.id)
+      .single()
+
+    fullName = profile?.full_name ?? ''
+    role = profile?.role ?? ''
+  }
 
   return (
     <>
-      <Navbar fullName={profile?.full_name ?? ''} role={profile?.role ?? ''} />
+      <Navbar fullName={fullName} role={role} />
       <div
         style={{
           display: 'flex',
           minHeight: 'calc(100vh - 56px)',
         }}
       >
-        <Sidebar fullName={profile?.full_name ?? ''} role={profile?.role ?? ''} />
+        <Sidebar fullName={fullName} role={role} />
         <main
           style={{
             flex: 1,

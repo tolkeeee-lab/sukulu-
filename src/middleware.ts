@@ -32,12 +32,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Routes publiques : ne jamais rediriger
-  if (pathname.startsWith('/auth/signout')) {
-    return supabaseResponse
-  }
-
-  // /dashboard/setup accessible aux utilisateurs connectés sans école
-  if (user && pathname === '/dashboard/setup') {
+  if (pathname.startsWith('/auth/')) {
     return supabaseResponse
   }
 
