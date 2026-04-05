@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import DashboardDirecteurClient from './DashboardDirecteurClient'
 
@@ -19,7 +18,10 @@ function getCurrentSchoolYear(): string {
 export default async function AccueilPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+
+  if (!user) {
+    return <div>Chargement...</div>
+  }
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -27,12 +29,14 @@ export default async function AccueilPage() {
     .eq('id', user.id)
     .single()
 
-  if (!profile?.school_id) redirect('/dashboard/setup')
-
-  const schoolId = profile.school_id as string
-  const school = profile.schools as { name: string } | null
+  const schoolId = profile?.school_id as string | undefined
+  const school = profile?.schools as { name: string } | null
   const schoolYear = getCurrentSchoolYear()
   const today = new Date().toISOString().split('T')[0]
+
+  if (!schoolId) {
+    return <div>Chargement...</div>
+  }
 
   const [
     studentsRes, classesCountRes, personnelRes, paymentsRes,
