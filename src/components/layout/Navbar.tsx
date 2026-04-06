@@ -5,9 +5,10 @@ import { getRoleLabel, getRoleIcon, getInitials } from '@/lib/utils/user'
 interface NavbarProps {
   fullName: string
   role: string
+  schoolName?: string
 }
 
-export default function Navbar({ fullName, role }: NavbarProps) {
+export default function Navbar({ fullName, role, schoolName }: NavbarProps) {
   return (
     <header
       style={{
@@ -23,7 +24,7 @@ export default function Navbar({ fullName, role }: NavbarProps) {
         borderBottom: '1px solid rgba(255,255,255,0.08)',
       }}
     >
-      {/* Logo */}
+      {/* Logo + nom école */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div
           style={{
@@ -43,21 +44,67 @@ export default function Navbar({ fullName, role }: NavbarProps) {
         >
           S
         </div>
-        <span
-          style={{
-            fontFamily: 'Playfair Display, serif',
-            fontWeight: 700,
-            fontSize: 18,
-            color: '#ffffff',
-            letterSpacing: '-0.3px',
-          }}
-        >
-          Sukulu
-        </span>
+        <div>
+          <div
+            style={{
+              fontFamily: 'Playfair Display, serif',
+              fontWeight: 700,
+              fontSize: 17,
+              color: '#ffffff',
+              letterSpacing: '-0.3px',
+              lineHeight: 1.2,
+            }}
+          >
+            Sukulu
+          </div>
+          {schoolName && (
+            <div
+              style={{
+                fontSize: 10,
+                color: 'rgba(255,255,255,0.5)',
+                lineHeight: 1,
+                marginTop: 1,
+              }}
+            >
+              {schoolName}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Right side */}
+      {/* Droite : cloche + badge rôle + nom + avatar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {/* Cloche notifications */}
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            background: 'rgba(255,255,255,0.1)',
+            borderRadius: 7,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: '#ffffff',
+            fontSize: 15,
+            position: 'relative',
+          }}
+        >
+          🔔
+          <div
+            style={{
+              position: 'absolute',
+              top: 4,
+              right: 4,
+              width: 7,
+              height: 7,
+              background: '#F4A261',
+              borderRadius: '50%',
+            }}
+          />
+        </div>
+
+        {/* Badge rôle */}
         {role && (
           <div
             style={{
@@ -78,8 +125,15 @@ export default function Navbar({ fullName, role }: NavbarProps) {
           </div>
         )}
 
+        {/* Nom */}
         {fullName && (
-          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 400 }}>
+          <span
+            style={{
+              fontSize: 12,
+              color: 'rgba(255,255,255,0.75)',
+              fontWeight: 400,
+            }}
+          >
             {fullName}
           </span>
         )}
