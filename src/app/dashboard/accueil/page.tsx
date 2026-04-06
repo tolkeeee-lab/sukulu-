@@ -20,9 +20,7 @@ export default async function AccueilPage() {
   const headersList = await headers()
   const userId = headersList.get('x-user-id')
 
-  if (!userId) {
-    return <div>Non autorisé</div>
-  }
+  if (!userId) return <div>Non autorisé</div>
 
   const supabase = createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -40,9 +38,7 @@ export default async function AccueilPage() {
   const schoolYear = getCurrentSchoolYear()
   const today = new Date().toISOString().split('T')[0]
 
-  if (!schoolId) {
-    return <div>École introuvable</div>
-  }
+  if (!schoolId) return <div>École introuvable</div>
 
   const [
     studentsRes,
@@ -76,11 +72,11 @@ export default async function AccueilPage() {
     .filter((p: { status: string }) => p.status === 'success' || p.status === 'paid')
     .reduce((s: number, p: { amount: number }) => s + Number(p.amount), 0)
 
-  const totalImpayes = payments
-    .filter((p: { status: string }) =>
-      p.status === 'pending' || p.status === 'unpaid' || p.status === 'overdue' || p.status === 'late'
-    )
-    .reduce((s: number, p: { amount: number }) => s + Number(p.amount), 0)
+  const paiementsImpayes = payments.filter((p: { status: string }) =>
+    p.status === 'pending' || p.status === 'unpaid' || p.status === 'overdue' || p.status === 'late'
+  )
+  const totalImpayes = paiementsImpayes.reduce((s: number, p: { amount: number }) => s + Number(p.amount), 0)
+  const nbImpayes = paiementsImpayes.length
 
   const totalStudents = studentsRes.count ?? 0
   const feeTotal = (feeTypesRes.data ?? []).reduce((s: number, f: { amount: number }) => s + Number(f.amount), 0)
@@ -94,38 +90,25 @@ export default async function AccueilPage() {
   ).length
 
   const grades = gradesRes.data ?? []
-  const moyenneGenerale: number | null =
-    grades.length > 0
-      ? Math.round(
-          (grades.reduce(
-            (s: number, g: { grade: number; max_grade: number }) =>
-              s + (Number(g.grade) / Number(g.max_grade)) * 20,
-            0
-          ) /
-            grades.length) *
-            10
-        ) / 10
-      : null
+  const moyenneGenerale: number | null = grades.length > 0
+    ? Math.round((grades.reduce((s: number, g: { grade: number; max_grade: number }) =>
+        s + (Number(g.grade) / Number(g.max_grade)) * 20, 0) / grades.length) * 10) / 10
+    : null
 
   const moisLabels = ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aou']
-  const moisNums = [9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8]
+  const moisNums =   [9,     10,    11,    12,    1,     2,     3,     4,     5,     6,     7,     8   ]
   const encaissementsParMois = moisLabels.map((mois, i) => {
     const idx = moisNums[i]
     const montant = payments
       .filter((p: { status: string; paid_at: string | null }) =>
-        (p.status === 'success' || p.status === 'paid') && p.paid_at
-      )
+        (p.status === 'success' || p.status === 'paid') && p.paid_at)
       .filter((p: { paid_at: string }) => new Date(p.paid_at).getMonth() + 1 === idx)
       .reduce((s: number, p: { amount: number }) => s + Number(p.amount), 0)
     return { mois, montant }
   })
 
   const classesStats = (classesRes.data ?? []).map(
-    (c: {
-      id: string
-      name: string
-      profiles: { full_name: string }[] | { full_name: string } | null
-    }) => ({
+    (c: { id: string; name: string; profiles: { full_name: string }[] | { full_name: string } | null }) => ({
       id: c.id,
       name: c.name,
       totalEleves: 0,
@@ -135,13 +118,7 @@ export default async function AccueilPage() {
   )
 
   const activiteRecente = (activityRes.data ?? []).map(
-    (a: {
-      id: number | string
-      action: string
-      entity: string
-      entity_id: string | null
-      created_at: string
-    }) => ({
+    (a: { id: number | string; action: string; entity: string; entity_id: string | null; created_at: string }) => ({
       id: String(a.id),
       action: a.action,
       entity: a.entity,
@@ -158,6 +135,7 @@ export default async function AccueilPage() {
       totalPersonnel={personnelRes.count ?? 0}
       totalEncaisse={totalEncaisse}
       totalImpayes={totalImpayes}
+      nbImpayes={nbImpayes}
       tauxRecouvrement={tauxRecouvrement}
       absencesAujourdhui={absencesAujourdhui}
       absencesNonJustifiees={absencesNonJustifiees}
@@ -170,4 +148,3 @@ export default async function AccueilPage() {
     />
   )
 }
-
