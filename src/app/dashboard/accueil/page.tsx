@@ -45,9 +45,17 @@ export default async function AccueilPage() {
   }
 
   const [
-    studentsRes, classesCountRes, personnelRes, paymentsRes,
-    feeTypesRes, absencesTodayRes, gradesRes, activityRes,
-    notifRes, classesRes,
+    studentsRes,
+    classesCountRes,
+    personnelRes,
+    paymentsRes,
+    feeTypesRes,
+    absencesTodayRes,
+    gradesRes,
+    activityRes,
+    notifRes,
+    classesRes,
+    inscriptionsRes,
   ] = await Promise.all([
     supabase.from('students').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('is_archived', false).eq('school_year', schoolYear),
     supabase.from('classes').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('school_year', schoolYear),
@@ -59,11 +67,21 @@ export default async function AccueilPage() {
     supabase.from('audit_logs').select('id, action, entity, entity_id, created_at').eq('school_id', schoolId).order('created_at', { ascending: false }).limit(5),
     supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('is_read', false),
     supabase.from('classes').select('id, name, teacher_id, profiles!classes_teacher_id_fkey(full_name)').eq('school_id', schoolId).eq('school_year', schoolYear),
+    supabase.from('students').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('school_year', schoolYear).eq('status', 'pending'),
   ])
 
   const payments = paymentsRes.data ?? []
-  const totalEncaisse = payments.filter((p: { status: string; amount: number }) => p.status === 'success').reduce((s: number, p: { amount: number }) => s + Number(p.amount), 0)
-  const totalImpayes = payments.filter((p: { status: string; amount: number }) => p.status === 'pending').reduce((s: number, p: { amount: number }) => s + Number(p.amount), 0)
+
+  const totalEncaisse = payments
+    .filter((p: { status: string }) => p.status === 'success' || p.status === 'paid')
+    .reduce((s: number, p: { amount: number }) => s + Number(p.amount), 0)
+
+  const totalImpayes = payments
+    .filter((p: { status: string }) =>
+      p.status === 'pending' || p.status === 'unpaid' || p.status === 'overdue' || p.status === 'late'
+    )
+    .reduce((s: number, p: { amount: number }) => s + Number(p.amount), 0)
+
   const totalStudents = studentsRes.count ?? 0
   const feeTotal = (feeTypesRes.data ?? []).reduce((s: number, f: { amount: number }) => s + Number(f.amount), 0)
   const totalAttendu = feeTotal > 0 && totalStudents > 0 ? feeTotal * totalStudents : 0
@@ -71,39 +89,66 @@ export default async function AccueilPage() {
 
   const absencesToday = absencesTodayRes.data ?? []
   const absencesAujourdhui = absencesToday.length
-  const absencesNonJustifiees = absencesToday.filter((a: { status: string; reason: string | null }) => a.status === 'absent' && !a.reason).length
+  const absencesNonJustifiees = absencesToday.filter(
+    (a: { status: string; reason: string | null }) => a.status === 'absent' && !a.reason
+  ).length
 
   const grades = gradesRes.data ?? []
-  const moyenneGenerale: number | null = grades.length > 0
-    ? Math.round((grades.reduce((s: number, g: { grade: number; max_grade: number }) => s + (Number(g.grade) / Number(g.max_grade)) * 20, 0) / grades.length) * 10) / 10
-    : null
+  const moyenneGenerale: number | null =
+    grades.length > 0
+      ? Math.round(
+          (grades.reduce(
+            (s: number, g: { grade: number; max_grade: number }) =>
+              s + (Number(g.grade) / Number(g.max_grade)) * 20,
+            0
+          ) /
+            grades.length) *
+            10
+        ) / 10
+      : null
 
   const moisLabels = ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aou']
   const moisNums = [9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8]
   const encaissementsParMois = moisLabels.map((mois, i) => {
     const idx = moisNums[i]
     const montant = payments
-      .filter((p: { status: string; paid_at: string | null }) => p.status === 'success' && p.paid_at)
+      .filter((p: { status: string; paid_at: string | null }) =>
+        (p.status === 'success' || p.status === 'paid') && p.paid_at
+      )
       .filter((p: { paid_at: string }) => new Date(p.paid_at).getMonth() + 1 === idx)
       .reduce((s: number, p: { amount: number }) => s + Number(p.amount), 0)
     return { mois, montant }
   })
 
-  const classesStats = (classesRes.data ?? []).map((c: { id: string; name: string; profiles: { full_name: string }[] | { full_name: string } | null }) => ({
-    id: c.id,
-    name: c.name,
-    totalEleves: 0,
-    enseignant: getTeacherName(c.profiles),
-    moyenne: null as number | null,
-  }))
+  const classesStats = (classesRes.data ?? []).map(
+    (c: {
+      id: string
+      name: string
+      profiles: { full_name: string }[] | { full_name: string } | null
+    }) => ({
+      id: c.id,
+      name: c.name,
+      totalEleves: 0,
+      enseignant: getTeacherName(c.profiles),
+      moyenne: null as number | null,
+    })
+  )
 
-  const activiteRecente = (activityRes.data ?? []).map((a: { id: number | string; action: string; entity: string; entity_id: string | null; created_at: string }) => ({
-    id: String(a.id),
-    action: a.action,
-    entity: a.entity,
-    entity_id: a.entity_id ?? null,
-    created_at: a.created_at,
-  }))
+  const activiteRecente = (activityRes.data ?? []).map(
+    (a: {
+      id: number | string
+      action: string
+      entity: string
+      entity_id: string | null
+      created_at: string
+    }) => ({
+      id: String(a.id),
+      action: a.action,
+      entity: a.entity,
+      entity_id: a.entity_id ?? null,
+      created_at: a.created_at,
+    })
+  )
 
   return (
     <DashboardDirecteurClient
@@ -121,6 +166,7 @@ export default async function AccueilPage() {
       classesStats={classesStats}
       activiteRecente={activiteRecente}
       notificationsNonLues={notifRes.count ?? 0}
+      inscriptionsEnAttente={inscriptionsRes.count ?? 0}
     />
   )
 }
