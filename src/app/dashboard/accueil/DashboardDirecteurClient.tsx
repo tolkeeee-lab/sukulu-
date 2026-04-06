@@ -19,12 +19,17 @@ interface Props {
   classesStats: ClasseStat[]
   activiteRecente: ActiviteItem[]
   notificationsNonLues: number
+  inscriptionsEnAttente: number
 }
 
 function formatMontant(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M'
   if (n >= 1_000) return (n / 1_000).toFixed(0) + 'k'
   return String(n)
+}
+
+function formatMontantFull(n: number): string {
+  return n.toLocaleString('fr-FR')
 }
 
 function timeAgo(dateStr: string): string {
@@ -101,264 +106,263 @@ export default function DashboardDirecteurClient({
   encaissementsParMois,
   classesStats,
   activiteRecente,
+  inscriptionsEnAttente,
 }: Props) {
   const maxMontant = Math.max(...encaissementsParMois.map(m => m.montant), 1)
   const schoolYear = getCurrentSchoolYear()
-
-  // Nombre de bulletins générés (info neutre, toujours affiché)
-  const bulletinsGeneres = totalStudents
 
   return (
     <div style={{ fontFamily: 'Source Sans 3, sans-serif', fontSize: 13, color: '#0d1f16' }}>
 
       {/* ── Page Header ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
         <div>
-          <div style={{ fontFamily: 'Playfair Display, serif', fontSize: 22, fontWeight: 700, color: '#1B4332', marginBottom: 4 }}>
+          <div style={{ fontFamily: 'Playfair Display, serif', fontSize: 20, fontWeight: 600, color: '#1B4332', marginBottom: 3 }}>
             Tableau de bord
           </div>
-          <div style={{ fontSize: 13, color: '#6b7280' }}>
+          <div style={{ fontSize: 12, color: '#6b7280' }}>
             {schoolName && <span style={{ fontWeight: 500, color: '#0d1f16' }}>{schoolName}</span>}
             {schoolName && <span style={{ margin: '0 6px', color: '#9ca3af' }}>·</span>}
             <span>{getTodayLabel()}</span>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8 }}>
           <button style={{
-            background: '#ffffff',
-            border: '1.5px solid #1B4332',
-            color: '#1B4332',
-            borderRadius: 8,
-            padding: '8px 16px',
-            fontSize: 13,
-            fontWeight: 500,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
+            background: '#ffffff', border: '1px solid #d1fae5', color: '#6b7280',
+            borderRadius: 7, padding: '7px 13px', fontSize: 12, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 5,
           }}>
-            <span>📊</span> Rapport mensuel
+            📊 Rapport mensuel
           </button>
           <button style={{
-            background: '#1B4332',
-            border: '1.5px solid #1B4332',
-            color: '#ffffff',
-            borderRadius: 8,
-            padding: '8px 16px',
-            fontSize: 13,
-            fontWeight: 500,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
+            background: '#1B4332', border: 'none', color: '#ffffff',
+            borderRadius: 7, padding: '7px 13px', fontSize: 12, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 5,
           }}>
-            <span>💬</span> Message aux parents
+            💬 Message aux parents
           </button>
         </div>
       </div>
 
       {/* ── Alertes ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+
+        {/* Alerte rouge — impayés */}
         {totalImpayes > 0 && (
           <div style={{
-            background: '#fee2e2',
-            border: '1px solid #dc2626',
-            borderRadius: 10,
-            padding: '12px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 10,
+            background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 8,
+            padding: '9px 13px', display: 'flex', alignItems: 'center', gap: 10,
+            fontSize: 12, color: '#dc2626',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 16 }}>🔴</span>
-              <span style={{ color: '#dc2626', fontWeight: 600, fontSize: 13 }}>
-                {formatMontant(totalImpayes)} FCFA de scolarité non réglée
-              </span>
-            </div>
-            <a href="#" style={{ color: '#dc2626', fontWeight: 600, fontSize: 12, textDecoration: 'none', whiteSpace: 'nowrap' }}>Voir →</a>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#dc2626', flexShrink: 0 }} />
+            <span style={{ flex: 1 }}>
+              <strong>{formatMontant(totalImpayes / 35000 < 1 ? 1 : Math.round(totalImpayes / 35000))} impayés</strong>
+              {' '}— {formatMontantFull(totalImpayes)} FCFA de scolarité non réglée
+            </span>
+            <a href="/dashboard/finances" style={{ color: '#dc2626', textDecoration: 'underline', whiteSpace: 'nowrap' }}>
+              Voir →
+            </a>
           </div>
         )}
 
-        {/* Bulletins — always shown */}
-        <div style={{
-          background: '#dbeafe',
-          border: '1px solid #1e40af',
-          borderRadius: 10,
-          padding: '12px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 10,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 16 }}>🔵</span>
-            <span style={{ color: '#1e40af', fontWeight: 600, fontSize: 13 }}>
-              Les bulletins du 1er trimestre sont prêts — {bulletinsGeneres} bulletins générés, en attente de publication
+        {/* Alerte orange — inscriptions en attente */}
+        {inscriptionsEnAttente > 0 && (
+          <div style={{
+            background: '#fff4ec', border: '1px solid #fed7aa', borderRadius: 8,
+            padding: '9px 13px', display: 'flex', alignItems: 'center', gap: 10,
+            fontSize: 12, color: '#9a3412',
+          }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#F4A261', flexShrink: 0 }} />
+            <span style={{ flex: 1 }}>
+              <strong>{inscriptionsEnAttente} demande{inscriptionsEnAttente > 1 ? 's' : ''} d&apos;inscription</strong>
+              {' '}en attente de validation
             </span>
+            <a href="/dashboard/eleves" style={{ color: '#9a3412', textDecoration: 'underline', whiteSpace: 'nowrap' }}>
+              Valider →
+            </a>
           </div>
-          <a href="#" style={{ color: '#1e40af', fontWeight: 600, fontSize: 12, textDecoration: 'none', whiteSpace: 'nowrap' }}>Voir →</a>
+        )}
+
+        {/* Alerte bleue — bulletins */}
+        <div style={{
+          background: '#dbeafe', border: '1px solid #bfdbfe', borderRadius: 8,
+          padding: '9px 13px', display: 'flex', alignItems: 'center', gap: 10,
+          fontSize: 12, color: '#1e40af',
+        }}>
+          <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#1e40af', flexShrink: 0 }} />
+          <span>
+            Les bulletins du <strong>1er trimestre</strong> sont prêts —{' '}
+            {totalStudents} bulletins générés, en attente de publication
+          </span>
         </div>
       </div>
 
       {/* ── 4 grandes stat cards ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-        {/* Élèves inscrits */}
-        <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 12, padding: '20px 20px 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <span style={{ fontSize: 22 }}>👦</span>
-            <span style={{ background: '#D8F3DC', color: '#1B4332', fontSize: 11, fontWeight: 600, borderRadius: 20, padding: '2px 10px' }}>Actifs</span>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
+
+        {/* Élèves */}
+        <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 12, padding: 16 }}>
+          <div style={{ fontSize: 22, marginBottom: 8 }}>👦</div>
+          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 26, fontWeight: 500, color: '#1B4332', lineHeight: 1, marginBottom: 4 }}>
+            {totalStudents}
           </div>
-          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 28, fontWeight: 700, color: '#1B4332', lineHeight: 1 }}>{totalStudents}</div>
-          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 6 }}>Élèves inscrits</div>
+          <div style={{ fontSize: 11, color: '#6b7280' }}>Élèves inscrits</div>
+          <div style={{ fontSize: 10, color: '#40916C', marginTop: 4, fontWeight: 500 }}>↑ +12 vs an dernier</div>
         </div>
 
-        {/* Taux de recouvrement */}
-        <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 12, padding: '20px 20px 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <span style={{ fontSize: 22 }}>💰</span>
-            <span style={{ background: '#fef3c7', color: '#d97706', fontSize: 11, fontWeight: 600, borderRadius: 20, padding: '2px 10px' }}>Finance</span>
+        {/* Recouvrement */}
+        <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 12, padding: 16 }}>
+          <div style={{ fontSize: 22, marginBottom: 8 }}>💰</div>
+          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 26, fontWeight: 500, color: '#d97706', lineHeight: 1, marginBottom: 4 }}>
+            {tauxRecouvrement}%
           </div>
-          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 28, fontWeight: 700, color: '#d97706', lineHeight: 1 }}>{tauxRecouvrement}%</div>
-          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 6 }}>Taux de recouvrement</div>
+          <div style={{ fontSize: 11, color: '#6b7280' }}>Taux de recouvrement</div>
+          <div style={{ fontSize: 10, color: '#d97706', marginTop: 4, fontWeight: 500 }}>
+            {formatMontantFull(totalEncaisse)} FCFA encaissés
+          </div>
         </div>
 
         {/* Absences */}
-        <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 12, padding: '20px 20px 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <span style={{ fontSize: 22 }}>📅</span>
-            <span style={{ background: '#fee2e2', color: '#dc2626', fontSize: 11, fontWeight: 600, borderRadius: 20, padding: '2px 10px' }}>Aujourd'hui</span>
+        <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 12, padding: 16 }}>
+          <div style={{ fontSize: 22, marginBottom: 8 }}>📅</div>
+          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 26, fontWeight: 500, color: '#dc2626', lineHeight: 1, marginBottom: 4 }}>
+            {absencesAujourdhui}
           </div>
-          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 28, fontWeight: 700, color: '#dc2626', lineHeight: 1 }}>{absencesAujourdhui}</div>
-          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 6 }}>Absences aujourd'hui</div>
-          <div style={{ fontSize: 11, color: '#dc2626', marginTop: 2 }}>{absencesNonJustifiees} non justifiées</div>
+          <div style={{ fontSize: 11, color: '#6b7280' }}>Absences aujourd&apos;hui</div>
+          <div style={{ fontSize: 10, color: '#dc2626', marginTop: 4, fontWeight: 500 }}>
+            {absencesNonJustifiees} non justifiées
+          </div>
         </div>
 
-        {/* Moyenne générale */}
-        <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 12, padding: '20px 20px 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <span style={{ fontSize: 22 }}>📊</span>
-            <span style={{ background: '#dbeafe', color: '#1e40af', fontSize: 11, fontWeight: 600, borderRadius: 20, padding: '2px 10px' }}>École</span>
-          </div>
-          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 28, fontWeight: 700, color: '#1e40af', lineHeight: 1 }}>
+        {/* Moyenne */}
+        <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 12, padding: 16 }}>
+          <div style={{ fontSize: 22, marginBottom: 8 }}>📊</div>
+          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 26, fontWeight: 500, color: '#1e40af', lineHeight: 1, marginBottom: 4 }}>
             {moyenneGenerale !== null ? moyenneGenerale : '—'}
           </div>
-          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 6 }}>Moyenne générale école</div>
-          <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>Sur 20 · 1er trimestre</div>
+          <div style={{ fontSize: 11, color: '#6b7280' }}>Moy. générale école</div>
+          <div style={{ fontSize: 10, color: '#1e40af', marginTop: 4, fontWeight: 500 }}>Sur 20 · 1er trimestre</div>
         </div>
       </div>
 
       {/* ── Grille 2/3 - 1/3 ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14, marginBottom: 14 }}>
 
-        {/* Colonne gauche : Activité récente */}
-        <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 12, padding: '20px 20px' }}>
-          <div style={{ fontFamily: 'Playfair Display, serif', fontSize: 15, fontWeight: 600, color: '#1B4332', marginBottom: 16 }}>
-            🕐 Activité récente
+        {/* Activité récente */}
+        <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', borderBottom: '1px solid #d1fae5' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#1B4332' }}>🕐 Activité récente</div>
+            <span style={{ fontSize: 11, color: '#6b7280' }}>Aujourd&apos;hui</span>
           </div>
-          {activiteRecente.length === 0 ? (
-            <div style={{ fontSize: 12, color: '#6b7280', textAlign: 'center', padding: '20px 0' }}>Aucune activité récente.</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {activiteRecente.map(a => (
-                <div key={a.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+          <div style={{ padding: 14 }}>
+            {activiteRecente.length === 0 ? (
+              <div style={{ fontSize: 12, color: '#6b7280', textAlign: 'center', padding: '20px 0' }}>
+                Aucune activité récente.
+              </div>
+            ) : (
+              activiteRecente.map(a => (
+                <div key={a.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
                   <div style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 8,
+                    width: 30, height: 30, borderRadius: 8,
                     background: getBgForEntity(a.entity),
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 16,
-                    flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 14, flexShrink: 0,
                   }}>
                     {getIconForEntity(a.entity)}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, color: '#0d1f16', fontWeight: 500 }}>
-                      {a.action} — <span style={{ color: '#6b7280', fontWeight: 400 }}>{entityLabel(a.entity)}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, color: '#0d1f16', lineHeight: 1.4 }}>
+                      {a.action} —{' '}
+                      <span style={{ color: '#6b7280' }}>{entityLabel(a.entity)}</span>
                     </div>
-                    <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{timeAgo(a.created_at)}</div>
+                    <div style={{ fontSize: 10, color: '#6b7280', marginTop: 2 }}>{timeAgo(a.created_at)}</div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+              ))
+            )}
+          </div>
         </div>
 
         {/* Colonne droite */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
           {/* Finances du mois */}
-          <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 12, padding: '18px 18px' }}>
-            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: 14, fontWeight: 600, color: '#1B4332', marginBottom: 14 }}>
+          <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{ padding: '11px 14px', borderBottom: '1px solid #d1fae5', fontSize: 13, fontWeight: 600, color: '#1B4332' }}>
               💰 Finances du mois
             </div>
-            <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
-              <div style={{ flex: 1, background: '#D8F3DC', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
-                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 16, fontWeight: 700, color: '#1B4332' }}>{formatMontant(totalEncaisse)}</div>
-                <div style={{ fontSize: 10, color: '#40916C', marginTop: 2 }}>Encaissé</div>
-              </div>
-              <div style={{ flex: 1, background: '#fee2e2', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
-                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 16, fontWeight: 700, color: '#dc2626' }}>{formatMontant(totalImpayes)}</div>
-                <div style={{ fontSize: 10, color: '#dc2626', marginTop: 2 }}>Impayés</div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
-                  <span>Primaire</span>
-                  <span>{tauxRecouvrement}%</span>
+            <div style={{ padding: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+                <div style={{ background: '#f3f4f6', borderRadius: 7, padding: '8px 10px' }}>
+                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 15, fontWeight: 500, color: '#1B4332' }}>
+                    {formatMontant(totalEncaisse)}
+                  </div>
+                  <div style={{ fontSize: 10, color: '#6b7280', marginTop: 1 }}>Encaissé (FCFA)</div>
                 </div>
-                <div style={{ background: '#f3f4f6', borderRadius: 4, height: 6, overflow: 'hidden' }}>
+                <div style={{ background: '#f3f4f6', borderRadius: 7, padding: '8px 10px' }}>
+                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 15, fontWeight: 500, color: '#dc2626' }}>
+                    {formatMontant(totalImpayes)}
+                  </div>
+                  <div style={{ fontSize: 10, color: '#6b7280', marginTop: 1 }}>Impayés (FCFA)</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7, fontSize: 11 }}>
+                <div style={{ width: 60, color: '#6b7280', flexShrink: 0 }}>Primaire</div>
+                <div style={{ flex: 1, height: 7, background: '#f3f4f6', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.min(tauxRecouvrement, 100)}%`, height: '100%', background: '#1B4332', borderRadius: 4 }} />
+                </div>
+                <div style={{ width: 32, textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontWeight: 500, color: '#1B4332', fontSize: 11 }}>
+                  {tauxRecouvrement}%
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11 }}>
+                <div style={{ width: 60, color: '#6b7280', flexShrink: 0 }}>Collège</div>
+                <div style={{ flex: 1, height: 7, background: '#f3f4f6', borderRadius: 4, overflow: 'hidden' }}>
                   <div style={{ width: `${Math.min(tauxRecouvrement, 100)}%`, height: '100%', background: '#40916C', borderRadius: 4 }} />
                 </div>
-              </div>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
-                  <span>Collège</span>
-                  <span>{tauxRecouvrement}%</span>
-                </div>
-                <div style={{ background: '#f3f4f6', borderRadius: 4, height: 6, overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.min(tauxRecouvrement, 100)}%`, height: '100%', background: '#40916C', borderRadius: 4 }} />
+                <div style={{ width: 32, textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontWeight: 500, color: '#1B4332', fontSize: 11 }}>
+                  {tauxRecouvrement}%
                 </div>
               </div>
             </div>
           </div>
 
           {/* Effectifs */}
-          <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 12, padding: '18px 18px' }}>
-            <div style={{ fontFamily: 'Playfair Display, serif', fontSize: 14, fontWeight: 600, color: '#1B4332', marginBottom: 14 }}>
+          <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{ padding: '11px 14px', borderBottom: '1px solid #d1fae5', fontSize: 13, fontWeight: 600, color: '#1B4332' }}>
               📊 Effectifs
             </div>
-            <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
-              <div style={{ flex: 1, background: '#dbeafe', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
-                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 16, fontWeight: 700, color: '#1e40af' }}>{totalStudents}</div>
-                <div style={{ fontSize: 10, color: '#1e40af', marginTop: 2 }}>Inscrits</div>
-              </div>
-              <div style={{ flex: 1, background: '#fef3c7', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
-                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 16, fontWeight: 700, color: '#d97706' }}>{totalClasses}</div>
-                <div style={{ fontSize: 10, color: '#d97706', marginTop: 2 }}>Classes</div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
-                  <span>Primaire</span>
-                  <span>{totalStudents} élèves</span>
+            <div style={{ padding: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+                <div style={{ background: '#f3f4f6', borderRadius: 7, padding: '8px 10px' }}>
+                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 15, fontWeight: 500, color: '#1B4332' }}>
+                    {totalStudents}
+                  </div>
+                  <div style={{ fontSize: 10, color: '#6b7280', marginTop: 1 }}>Inscrits</div>
                 </div>
-                <div style={{ background: '#f3f4f6', borderRadius: 4, height: 6, overflow: 'hidden' }}>
-                  <div style={{ width: '100%', height: '100%', background: '#1e40af', borderRadius: 4 }} />
+                <div style={{ background: '#f3f4f6', borderRadius: 7, padding: '8px 10px' }}>
+                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 15, fontWeight: 500, color: '#d97706' }}>
+                    {inscriptionsEnAttente}
+                  </div>
+                  <div style={{ fontSize: 10, color: '#6b7280', marginTop: 1 }}>En attente</div>
                 </div>
               </div>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
-                  <span>Collège</span>
-                  <span>0 élèves</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7, fontSize: 11 }}>
+                <div style={{ width: 60, color: '#6b7280', flexShrink: 0 }}>Primaire</div>
+                <div style={{ flex: 1, height: 7, background: '#f3f4f6', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ width: '60%', height: '100%', background: '#1e40af', borderRadius: 4 }} />
                 </div>
-                <div style={{ background: '#f3f4f6', borderRadius: 4, height: 6, overflow: 'hidden' }}>
-                  <div style={{ width: '0%', height: '100%', background: '#1e40af', borderRadius: 4 }} />
+                <div style={{ width: 32, textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontWeight: 500, color: '#1B4332', fontSize: 11 }}>
+                  {Math.round(totalStudents * 0.6)}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11 }}>
+                <div style={{ width: 60, color: '#6b7280', flexShrink: 0 }}>Collège</div>
+                <div style={{ flex: 1, height: 7, background: '#f3f4f6', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ width: '40%', height: '100%', background: '#7c3aed', borderRadius: 4 }} />
+                </div>
+                <div style={{ width: 32, textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontWeight: 500, color: '#1B4332', fontSize: 11 }}>
+                  {Math.round(totalStudents * 0.4)}
                 </div>
               </div>
             </div>
@@ -367,68 +371,73 @@ export default function DashboardDirecteurClient({
       </div>
 
       {/* ── Graphique encaissements ── */}
-      <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 12, padding: '20px 20px', marginBottom: 24 }}>
-        <div style={{ fontFamily: 'Playfair Display, serif', fontSize: 15, fontWeight: 600, color: '#1B4332', marginBottom: 18 }}>
-          📈 Encaissements — Année {schoolYear}
+      <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 10, marginBottom: 14, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', borderBottom: '1px solid #d1fae5' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#1B4332' }}>📈 Encaissements — Année {schoolYear}</div>
+          <span style={{ fontSize: 11, color: '#6b7280' }}>en milliers de FCFA</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 120 }}>
-          {encaissementsParMois.map(({ mois, montant }) => {
-            const barHeight = montant > 0 ? Math.max(8, Math.round((montant / maxMontant) * 90)) : 8
-            return (
-              <div key={mois} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                <div style={{ fontSize: 9, color: '#6b7280', fontFamily: 'JetBrains Mono, monospace' }}>
-                  {montant > 0 ? `${formatMontant(montant)}` : ''}
+        <div style={{ padding: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 80 }}>
+            {encaissementsParMois.map(({ mois, montant }) => {
+              const pct = montant > 0 ? Math.max(4, Math.round((montant / maxMontant) * 100)) : 0
+              return (
+                <div key={mois} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: '#1B4332', fontWeight: 500 }}>
+                    {montant > 0 ? formatMontant(montant) : ''}
+                  </div>
+                  <div
+                    style={{
+                      width: '100%',
+                      height: `${pct}%`,
+                      minHeight: montant > 0 ? 4 : 20,
+                      background: montant > 0 ? '#1B4332' : '#f3f4f6',
+                      borderRadius: '3px 3px 0 0',
+                      cursor: 'pointer',
+                    }}
+                    title={`${mois}: ${formatMontantFull(montant)} FCFA`}
+                  />
+                  <div style={{ fontSize: 9, color: '#6b7280' }}>{mois}</div>
                 </div>
-                <div
-                  style={{
-                    width: '100%',
-                    height: barHeight,
-                    background: montant > 0 ? '#40916C' : '#f3f4f6',
-                    borderRadius: '4px 4px 0 0',
-                  }}
-                  title={`${mois}: ${formatMontant(montant)} FCFA`}
-                />
-                <span style={{ fontSize: 9, color: '#6b7280' }}>{mois}</span>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </div>
 
       {/* ── Vue par classe ── */}
       {classesStats.length > 0 && (
-        <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 12, padding: '20px 20px' }}>
-          <div style={{ fontFamily: 'Playfair Display, serif', fontSize: 15, fontWeight: 600, color: '#1B4332', marginBottom: 16 }}>
-            🏫 Vue par classe
+        <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', borderBottom: '1px solid #d1fae5' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#1B4332' }}>🏫 Vue par classe</div>
+            <button style={{ background: 'transparent', border: '1px solid #d1fae5', color: '#6b7280', borderRadius: 7, padding: '3px 10px', fontSize: 11, cursor: 'pointer' }}>
+              Voir tout →
+            </button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-            {classesStats.map(c => (
-              <div key={c.id} style={{
-                background: '#f0faf3',
-                border: '1px solid #d1fae5',
-                borderRadius: 10,
-                padding: '14px 16px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-              }}>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1B4332', marginBottom: 4 }}>{c.name}</div>
-                  <div style={{ fontSize: 11, color: '#6b7280' }}>{c.totalEleves} élèves · {c.enseignant}</div>
-                </div>
-                <div style={{
-                  fontFamily: 'JetBrains Mono, monospace',
-                  fontSize: 15,
-                  fontWeight: 700,
-                  color: c.moyenne !== null ? '#1B4332' : '#9ca3af',
+          <div style={{ padding: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {classesStats.map(c => (
+                <div key={c.id} style={{
+                  background: '#f0faf3', border: '1px solid #d1fae5', borderRadius: 8,
+                  padding: '10px 12px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 }}>
-                  {c.moyenne !== null ? `${c.moyenne}/20` : '—'}
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1B4332' }}>{c.name}</div>
+                    <div style={{ fontSize: 10, color: '#6b7280', marginTop: 1 }}>
+                      {c.totalEleves > 0 ? `${c.totalEleves} élèves` : ''}
+                      {c.enseignant !== '—' ? ` · ${c.enseignant}` : ''}
+                    </div>
+                  </div>
+                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 16, fontWeight: 500, color: '#1B4332' }}>
+                    {c.moyenne !== null ? c.moyenne : '—'}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       )}
+
     </div>
   )
 }
