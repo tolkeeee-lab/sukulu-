@@ -13,7 +13,6 @@ export default async function ElevesPage() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // Récupérer school_id depuis le profil (déjà dispo dans le layout)
   const { data: profile } = await supabase
     .from('profiles')
     .select('school_id')
@@ -29,16 +28,14 @@ export default async function ElevesPage() {
     return now.getMonth() + 1 >= 9 ? `${y}-${y + 1}` : `${y - 1}-${y}`
   })()
 
-  // ── Fetch en parallèle ──
   const [
-    { data: students },
+    { data: rawStudents },
     { data: classes },
     { data: payments },
     { data: attendances },
-    { data: archivedStudents },
+    { data: rawArchivedStudents },
   ] = await Promise.all([
 
-    // Élèves actifs avec classe + parent
     supabase
       .from('students')
       .select(`
@@ -53,7 +50,6 @@ export default async function ElevesPage() {
       .eq('is_archived', false)
       .order('last_name', { ascending: true }),
 
-    // Classes
     supabase
       .from('classes')
       .select('id, name, level')
@@ -61,19 +57,16 @@ export default async function ElevesPage() {
       .eq('school_year', schoolYear)
       .order('name'),
 
-    // Paiements
     supabase
       .from('payments')
       .select('student_id, status, amount, paid_at, payment_method, receipt_number')
       .eq('school_id', schoolId),
 
-    // Absences
     supabase
       .from('attendances')
       .select('student_id, status, date, reason')
       .eq('school_id', schoolId),
 
-    // Élèves archivés
     supabase
       .from('students')
       .select(`
@@ -87,15 +80,27 @@ export default async function ElevesPage() {
       .order('last_name', { ascending: true }),
   ])
 
+  // Normaliser les jointures : Supabase retourne des tableaux, on prend le premier élément
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const normalize = (data: any[] | null) =>
+    (data ?? []).map((row) => ({
+      ...row,
+      classes: Array.isArray(row.classes) ? (row.classes[0] ?? null) : (row.classes ?? null),
+      profiles: Array.isArray(row.profiles) ? (row.profiles[0] ?? null) : (row.profiles ?? null),
+    }))
+
+  const students = normalize(rawStudents)
+  const archivedStudents = normalize(rawArchivedStudents)
+
   return (
     <ElevesClient
       schoolId={schoolId}
       schoolYear={schoolYear}
-      students={students ?? []}
+      students={students}
       classes={classes ?? []}
       payments={payments ?? []}
       attendances={attendances ?? []}
-      archivedStudents={archivedStudents ?? []}
+      archivedStudents={archivedStudents}
     />
   )
 }
