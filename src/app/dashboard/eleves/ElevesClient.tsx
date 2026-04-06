@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useRef } from 'react'
+import { useIsMobile } from '@/hooks/useIsMobile'
 
 // ── TYPES ──
 interface Classe {
@@ -221,6 +222,8 @@ export default function ElevesClient({
   archivedStudents,
 }: Props) {
 
+  const isMobile = useIsMobile()
+
   // ── État ──
   const [onglet, setOnglet] = useState<'liste' | 'archives'>('liste')
   const [vue, setVue] = useState<'table' | 'cartes'>('table')
@@ -332,30 +335,30 @@ export default function ElevesClient({
     <div style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 13, color: '#0d1f16' }}>
 
       {/* ── En-tête de page ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18, flexDirection: isMobile ? 'column' : 'row', gap: 10 }}>
         <div>
-          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: '#1B4332', margin: 0 }}>
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: isMobile ? 18 : 22, fontWeight: 700, color: '#1B4332', margin: 0 }}>
             Gestion des Élèves
           </h1>
           <p style={{ fontSize: 12, color: '#6b7280', marginTop: 3 }}>
             {students.length} élèves actifs · Année scolaire {schoolYear}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
           <button style={btn('outline')} onClick={() => showToast('📊 Export Excel généré !')}>
             ⬇ Exporter
           </button>
           <button style={btn('outline')} onClick={() => openModal('import')}>
             ⬆ Importer
           </button>
-          <button style={btn('primary')} onClick={() => openModal('ajouter')}>
+          <button style={{ ...btn('primary'), flex: isMobile ? 1 : 'none' }} onClick={() => openModal('ajouter')}>
             + Ajouter un élève
           </button>
         </div>
       </div>
 
       {/* ── 5 Stat Cards ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: 18 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(5,1fr)', gap: 10, marginBottom: 18 }}>
         {[
           { icon: '👦', val: students.length,       lbl: 'Total élèves',          color: '#1B4332', trend: 'Actifs',    up: true },
           { icon: '✅', val: nbAJour,                lbl: 'Paiements à jour',      color: '#1B4332', trend: `${students.length > 0 ? Math.round(nbAJour / students.length * 100) : 0}%`, up: true },
@@ -436,15 +439,15 @@ export default function ElevesClient({
           )}
 
           {/* Barre recherche + filtres */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center', flexDirection: isMobile ? 'column' : 'row' }}>
             <input
-              style={{ ...css.input, flex: 1, minWidth: 200 }}
+              style={{ ...css.input, flex: 1, minWidth: isMobile ? '100%' : 200 }}
               placeholder="Rechercher par nom, prénom ou matricule…"
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1) }}
             />
             <select
-              style={css.select}
+              style={{ ...css.select, width: isMobile ? '100%' : 'auto' }}
               value={filtreClasse}
               onChange={e => { setFiltreClasse(e.target.value); setPage(1) }}
             >
@@ -454,7 +457,7 @@ export default function ElevesClient({
               ))}
             </select>
             <select
-              style={css.select}
+              style={{ ...css.select, width: isMobile ? '100%' : 'auto' }}
               value={filtrePaiement}
               onChange={e => { setFiltrePaiement(e.target.value); setPage(1) }}
             >
@@ -467,7 +470,7 @@ export default function ElevesClient({
             {/* Réinitialiser filtres */}
             {(search || filtreClasse || filtrePaiement) && (
               <button
-                style={btn('outline', 'sm')}
+                style={{ ...btn('outline', 'sm'), width: isMobile ? '100%' : 'auto' }}
                 onClick={() => { setSearch(''); setFiltreClasse(''); setFiltrePaiement(''); setPage(1) }}
               >
                 ✕ Réinitialiser
@@ -475,9 +478,9 @@ export default function ElevesClient({
             )}
 
             {/* Toggle vue */}
-            <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
-              <button style={btn(vue === 'table' ? 'primary' : 'outline', 'sm')} onClick={() => setVue('table')}>☰ Tableau</button>
-              <button style={btn(vue === 'cartes' ? 'primary' : 'outline', 'sm')} onClick={() => setVue('cartes')}>⊞ Cartes</button>
+            <div style={{ display: 'flex', gap: 4, marginLeft: isMobile ? 0 : 'auto', width: isMobile ? '100%' : 'auto' }}>
+              <button style={{ ...btn(vue === 'table' ? 'primary' : 'outline', 'sm'), flex: isMobile ? 1 : 'none' }} onClick={() => setVue('table')}>☰ Tableau</button>
+              <button style={{ ...btn(vue === 'cartes' ? 'primary' : 'outline', 'sm'), flex: isMobile ? 1 : 'none' }} onClick={() => setVue('cartes')}>⊞ Cartes</button>
             </div>
           </div>
 
@@ -674,7 +677,7 @@ export default function ElevesClient({
               <div style={css.sectionHeader}>
                 <div style={css.sectionTitre}>⊞ Vue cartes ({filtered.length})</div>
               </div>
-              <div style={{ padding: 14, display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+              <div style={{ padding: 14, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 12 }}>
                 {filtered.slice(0, 21).map(eleve => {
                   const color     = getColor(eleve.id)
                   const initiales = getInitials(eleve.first_name, eleve.last_name)
@@ -828,7 +831,7 @@ export default function ElevesClient({
             onClick={closeModal}
           >
             <div
-              style={{ background: '#fff', borderRadius: 14, padding: 24, width: 720, maxWidth: '96vw', maxHeight: '92vh', overflowY: 'auto' }}
+              style={{ background: '#fff', borderRadius: 14, padding: isMobile ? 16 : 24, width: 'min(720px, 96vw)', maxHeight: '92vh', overflowY: 'auto' }}
               onClick={e => e.stopPropagation()}
             >
               {/* Header modal */}
@@ -898,7 +901,7 @@ export default function ElevesClient({
               {/* ─ Tab Infos ─ */}
               {detailTab === 'infos' && (
                 <div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8 }}>
                     <InfoField lbl="Matricule"         val={eleveDetail.matricule} />
                     <InfoField lbl="Date de naissance" val={eleveDetail.birth_date ? new Date(eleveDetail.birth_date).toLocaleDateString('fr-FR') : '—'} />
                     <InfoField lbl="Classe"            val={eleveDetail.classes?.name} />
@@ -1049,7 +1052,7 @@ export default function ElevesClient({
           onClick={closeModal}
         >
           <div
-            style={{ background: '#fff', borderRadius: 14, padding: 24, width: 560, maxWidth: '96vw', maxHeight: '92vh', overflowY: 'auto' }}
+            style={{ background: '#fff', borderRadius: 14, padding: isMobile ? 16 : 24, width: 'min(560px, 96vw)', maxHeight: '92vh', overflowY: 'auto' }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
@@ -1065,7 +1068,7 @@ export default function ElevesClient({
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 13 }}>
               {/* Prénom */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <label style={css.formLabel}>Prénom *</label>
@@ -1126,7 +1129,7 @@ export default function ElevesClient({
           onClick={closeModal}
         >
           <div
-            style={{ background: '#fff', borderRadius: 14, padding: 24, width: 480, maxWidth: '96vw' }}
+            style={{ background: '#fff', borderRadius: 14, padding: isMobile ? 16 : 24, width: 'min(480px, 96vw)' }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
@@ -1135,7 +1138,7 @@ export default function ElevesClient({
               </div>
               <button onClick={closeModal} style={{ width: 30, height: 30, borderRadius: '50%', background: '#f3f4f6', border: 'none', cursor: 'pointer', fontSize: 15 }}>✕</button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 13 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <label style={css.formLabel}>Prénom</label>
                 <input style={css.input} defaultValue={eleveDetail.first_name} />
@@ -1261,13 +1264,14 @@ export default function ElevesClient({
       {/* ── Toast notification ── */}
       {toastMsg && (
         <div style={{
-          position: 'fixed', bottom: 24, right: 24,
+          position: 'fixed', bottom: isMobile ? 72 : 24, right: 24,
           background: '#1B4332', color: '#fff',
           padding: '10px 16px', borderRadius: 8,
           fontSize: 12, fontWeight: 500,
           boxShadow: '0 4px 12px rgba(27,67,50,0.3)',
           zIndex: 999, display: 'flex', alignItems: 'center', gap: 8,
           animation: 'fadeIn .2s ease',
+          maxWidth: isMobile ? 'calc(100vw - 48px)' : 'auto',
         }}>
           {toastMsg}
         </div>

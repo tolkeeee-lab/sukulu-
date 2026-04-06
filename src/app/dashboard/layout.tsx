@@ -1,7 +1,6 @@
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { headers } from 'next/headers'
-import Navbar from '@/components/layout/Navbar'
-import Sidebar from '@/components/layout/Sidebar'
+import DashboardShell from './DashboardShell'
 
 export default async function DashboardLayout({
   children,
@@ -32,21 +31,8 @@ export default async function DashboardLayout({
   }
 
   return (
-    <>
-      <Navbar fullName={fullName} role={role} schoolName={schoolName} />
-      <div style={{ display: 'flex', minHeight: 'calc(100vh - 56px)' }}>
-        <Sidebar fullName={fullName} role={role} schoolName={schoolName} />
-        <main
-          style={{
-            flex: 1,
-            padding: '22px 24px',
-            overflowY: 'auto',
-            minWidth: 0,
-          }}
-        >
-          {children}
-        </main>
-      </div>
-    </>
+    <DashboardShell fullName={fullName} role={role} schoolName={schoolName}>
+      {children}
+    </DashboardShell>
   )
 }
