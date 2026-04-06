@@ -7,6 +7,7 @@ import { getRoleLabel, getRoleIcon, getInitials } from '@/lib/utils/user'
 interface SidebarProps {
   fullName: string
   role: string
+  schoolName?: string
 }
 
 interface NavItem {
@@ -50,10 +51,11 @@ const bottomItems: NavItem[] = [
   { icon: '🚪', label: 'Déconnexion', href: '/auth/signout' },
 ]
 
-export default function Sidebar({ fullName, role }: SidebarProps) {
+export default function Sidebar({ fullName, role, schoolName }: SidebarProps) {
   const pathname = usePathname()
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(href + '/')
 
   const navItemStyle = (href: string): React.CSSProperties => ({
     display: 'flex',
@@ -115,8 +117,19 @@ export default function Sidebar({ fullName, role }: SidebarProps) {
         >
           {getInitials(fullName)}
         </div>
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#ffffff' }}>{fullName || '—'}</div>
+        <div style={{ minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: '#ffffff',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {fullName || '—'}
+          </div>
           {role && (
             <div
               style={{
@@ -132,10 +145,24 @@ export default function Sidebar({ fullName, role }: SidebarProps) {
               <span>{getRoleLabel(role)}</span>
             </div>
           )}
+          {schoolName && (
+            <div
+              style={{
+                fontSize: 10,
+                color: 'rgba(255,255,255,0.45)',
+                marginTop: 2,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              🏫 {schoolName}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Navigation */}
+      {/* Navigation principale */}
       <nav style={{ flex: 1, padding: '4px 8px' }}>
         {navSections.map((section, sectionIdx) => (
           <div key={sectionIdx} style={{ marginBottom: 8 }}>
@@ -163,7 +190,7 @@ export default function Sidebar({ fullName, role }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Bottom items */}
+      {/* Bas de sidebar */}
       <div style={{ padding: '4px 8px 12px', borderTop: '1px solid #f0faf3' }}>
         {bottomItems.map((item) => (
           <a
