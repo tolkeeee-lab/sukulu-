@@ -28,7 +28,7 @@ export default async function DashboardLayout({
 
     fullName = profile?.full_name ?? ''
     role = profile?.role ?? ''
-    schoolName = (profile?.schools as { name: string } | null)?.name ?? ''
+    schoolName = (profile?.schools as unknown as { name: string } | null)?.name ?? ''
   }
 
   return (
