@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Navbar from '@/components/layout/Navbar'
 import Sidebar from '@/components/layout/Sidebar'
+import { useIsMobile } from '@/hooks/useIsMobile'
 
 interface DashboardShellProps {
   children: React.ReactNode
@@ -23,15 +24,8 @@ const bottomNavItems = [
 
 export default function DashboardShell({ children, fullName, role, schoolName }: DashboardShellProps) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
+  const isMobile = useIsMobile()
   const pathname = usePathname()
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
 
   // Fermer la sidebar quand on change de page sur mobile
   useEffect(() => {

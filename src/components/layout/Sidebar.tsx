@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { getRoleLabel, getRoleIcon, getInitials } from '@/lib/utils/user'
+import { useIsMobile } from '@/hooks/useIsMobile'
 
 interface SidebarProps {
   fullName: string
@@ -56,14 +56,7 @@ const bottomItems: NavItem[] = [
 
 export default function Sidebar({ fullName, role, schoolName, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname()
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
+  const isMobile = useIsMobile()
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + '/')

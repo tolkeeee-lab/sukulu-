@@ -1,18 +1,7 @@
 'use client'
 
-import { useState, useMemo, useRef, useEffect } from 'react'
-
-// ── HOOK ──
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false)
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
-  return isMobile
-}
+import { useState, useMemo, useRef } from 'react'
+import { useIsMobile } from '@/hooks/useIsMobile'
 
 // ── TYPES ──
 interface Classe {

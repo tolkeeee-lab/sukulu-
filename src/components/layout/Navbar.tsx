@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { getRoleLabel, getRoleIcon, getInitials } from '@/lib/utils/user'
+import { useIsMobile } from '@/hooks/useIsMobile'
 
 interface NavbarProps {
   fullName: string
@@ -12,14 +12,7 @@ interface NavbarProps {
 }
 
 export default function Navbar({ fullName, role, schoolName, onMenuToggle, menuOpen }: NavbarProps) {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
+  const isMobile = useIsMobile()
 
   return (
     <header
