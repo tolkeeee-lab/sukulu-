@@ -13,12 +13,13 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet: Array<{ name: string; value: string; options?: Record<string, unknown> }>) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          )
-          // ✅ NE PAS recréer supabaseResponse ici
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options as Parameters<typeof supabaseResponse.cookies.set>[2])
+            supabaseResponse.cookies.set(
+              name,
+              value,
+              options as Parameters<typeof supabaseResponse.cookies.set>[2]
+            )
           )
         },
       },
@@ -31,9 +32,7 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  if (pathname.startsWith('/auth/')) {
-    return supabaseResponse
-  }
+  if (pathname.startsWith('/auth/')) return supabaseResponse
 
   if (!user && pathname.startsWith('/dashboard')) {
     const url = request.nextUrl.clone()
@@ -47,11 +46,22 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Injecter l'user_id dans les headers pour les Server Components
+  if (user) {
+    const requestHeaders = new Headers(request.headers)
+    requestHeaders.set('x-user-id', user.id)
+    const newResponse = NextResponse.next({ request: { headers: requestHeaders } })
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      newResponse.cookies.set(cookie.name, cookie.value)
+    })
+    return newResponse
+  }
+
   return supabaseResponse
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
