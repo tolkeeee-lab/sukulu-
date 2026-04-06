@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { headers } from 'next/headers'
 import DashboardDirecteurClient from './DashboardDirecteurClient'
 
 function getTeacherName(profiles: { full_name: string }[] | { full_name: string } | null): string {
@@ -16,17 +17,22 @@ function getCurrentSchoolYear(): string {
 }
 
 export default async function AccueilPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const headersList = await headers()
+  const userId = headersList.get('x-user-id')
 
-  if (!user) {
-    return <div>Chargement...</div>
+  if (!userId) {
+    return <div>Non autorisé</div>
   }
+
+  const supabase = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('*, schools(*)')
-    .eq('id', user.id)
+    .eq('id', userId)
     .single()
 
   const schoolId = profile?.school_id as string | undefined
@@ -35,7 +41,7 @@ export default async function AccueilPage() {
   const today = new Date().toISOString().split('T')[0]
 
   if (!schoolId) {
-    return <div>Chargement...</div>
+    return <div>École introuvable</div>
   }
 
   const [
