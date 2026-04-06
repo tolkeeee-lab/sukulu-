@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { headers } from 'next/headers'
 import Navbar from '@/components/layout/Navbar'
 import Sidebar from '@/components/layout/Sidebar'
 
@@ -7,33 +8,34 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const headersList = await headers()
+  const userId = headersList.get('x-user-id')
 
   let fullName = ''
   let role = ''
+  let schoolName = ''
 
-  if (user) {
-    const { data: profile } = await supabase
+  if (userId) {
+    const admin = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    const { data: profile } = await admin
       .from('profiles')
-      .select('full_name, role')
-      .eq('id', user.id)
+      .select('full_name, role, schools(name)')
+      .eq('id', userId)
       .single()
 
     fullName = profile?.full_name ?? ''
     role = profile?.role ?? ''
+    schoolName = (profile?.schools as { name: string } | null)?.name ?? ''
   }
 
   return (
     <>
-      <Navbar fullName={fullName} role={role} />
-      <div
-        style={{
-          display: 'flex',
-          minHeight: 'calc(100vh - 56px)',
-        }}
-      >
-        <Sidebar fullName={fullName} role={role} />
+      <Navbar fullName={fullName} role={role} schoolName={schoolName} />
+      <div style={{ display: 'flex', minHeight: 'calc(100vh - 56px)' }}>
+        <Sidebar fullName={fullName} role={role} schoolName={schoolName} />
         <main
           style={{
             flex: 1,
