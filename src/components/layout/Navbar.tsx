@@ -1,14 +1,26 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { getRoleLabel, getRoleIcon, getInitials } from '@/lib/utils/user'
 
 interface NavbarProps {
   fullName: string
   role: string
   schoolName?: string
+  onMenuToggle: () => void
+  menuOpen: boolean
 }
 
-export default function Navbar({ fullName, role, schoolName }: NavbarProps) {
+export default function Navbar({ fullName, role, schoolName, onMenuToggle, menuOpen }: NavbarProps) {
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
   return (
     <header
       style={{
@@ -20,12 +32,12 @@ export default function Navbar({ fullName, role, schoolName }: NavbarProps) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '0 20px',
+        padding: '0 16px',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
       }}
     >
       {/* Logo + nom école */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
         <div
           style={{
             width: 34,
@@ -44,7 +56,7 @@ export default function Navbar({ fullName, role, schoolName }: NavbarProps) {
         >
           S
         </div>
-        <div>
+        <div style={{ minWidth: 0 }}>
           <div
             style={{
               fontFamily: 'Playfair Display, serif',
@@ -64,6 +76,10 @@ export default function Navbar({ fullName, role, schoolName }: NavbarProps) {
                 color: 'rgba(255,255,255,0.5)',
                 lineHeight: 1,
                 marginTop: 1,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                maxWidth: isMobile ? 140 : 'none',
               }}
             >
               {schoolName}
@@ -72,8 +88,8 @@ export default function Navbar({ fullName, role, schoolName }: NavbarProps) {
         </div>
       </div>
 
-      {/* Droite : cloche + badge rôle + nom + avatar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      {/* Droite : cloche + (badge rôle + nom sur desktop) + avatar + hamburger sur mobile */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12, flexShrink: 0 }}>
         {/* Cloche notifications */}
         <div
           style={{
@@ -104,8 +120,8 @@ export default function Navbar({ fullName, role, schoolName }: NavbarProps) {
           />
         </div>
 
-        {/* Badge rôle */}
-        {role && (
+        {/* Badge rôle — masqué sur mobile */}
+        {!isMobile && role && (
           <div
             style={{
               background: 'rgba(244,162,97,0.18)',
@@ -125,8 +141,8 @@ export default function Navbar({ fullName, role, schoolName }: NavbarProps) {
           </div>
         )}
 
-        {/* Nom */}
-        {fullName && (
+        {/* Nom — masqué sur mobile */}
+        {!isMobile && fullName && (
           <span
             style={{
               fontSize: 12,
@@ -157,6 +173,30 @@ export default function Navbar({ fullName, role, schoolName }: NavbarProps) {
         >
           {getInitials(fullName)}
         </div>
+
+        {/* Bouton hamburger — visible sur mobile uniquement */}
+        {isMobile && (
+          <button
+            onClick={onMenuToggle}
+            aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+            style={{
+              width: 36,
+              height: 36,
+              background: menuOpen ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)',
+              border: 'none',
+              borderRadius: 7,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#ffffff',
+              fontSize: 18,
+              flexShrink: 0,
+            }}
+          >
+            {menuOpen ? '✕' : '☰'}
+          </button>
+        )}
       </div>
     </header>
   )
