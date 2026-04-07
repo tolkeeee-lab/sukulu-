@@ -18,7 +18,7 @@ interface ClassesClientProps {
 }
 
 type NiveauTab = 'Toutes' | 'Primaire' | 'Collège' | 'Lycée'
-type ViewMode = 'grille' | 'tableau'
+type ViewMode = 'grille' | 'tableau' | 'stats'
 type SortKey = 'name' | 'level' | 'eleveCount'
 type SortDir = 'asc' | 'desc'
 type ModalMode = 'none' | 'create' | 'edit' | 'assign'
@@ -511,6 +511,18 @@ export default function ClassesClient({
           >
             ☰
           </button>
+          <button
+            onClick={() => setViewMode('stats')}
+            title="Vue statistiques"
+            style={{
+              padding: '5px 10px', borderRadius: 7, fontSize: 14, border: 'none', cursor: 'pointer',
+              background: viewMode === 'stats' ? '#D8F3DC' : '#f3f4f6',
+              color: viewMode === 'stats' ? '#1B4332' : '#6b7280',
+              fontWeight: 600,
+            }}
+          >
+            📊
+          </button>
         </div>
       </div>
 
@@ -709,7 +721,7 @@ export default function ClassesClient({
             )
           })}
         </div>
-      ) : (
+      ) : viewMode === 'tableau' ? (
         // ── Table view ──
         <div style={{ background: '#fff', border: '1px solid #d1fae5', borderRadius: 12, overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -811,6 +823,122 @@ export default function ClassesClient({
               </tr>
             </tfoot>
           </table>
+        </div>
+      ) : (
+        // ── Stats view ──
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          {/* Colonne gauche */}
+          <div>
+            {/* Section 1 — Remplissage par classe */}
+            <div style={{ background: '#fff', border: '1px solid #d1fae5', borderRadius: 12, overflow: 'hidden', marginBottom: 14 }}>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid #d1fae5', fontWeight: 700, fontSize: 13, color: '#1B4332' }}>
+                📊 Remplissage par classe
+              </div>
+              <div style={{ padding: '14px 16px' }}>
+                {[...classes]
+                  .sort((a, b) => b.eleveCount - a.eleveCount)
+                  .map(c => {
+                    const pct = Math.min(100, Math.round((c.eleveCount / CAPACITY) * 100))
+                    const color = pct >= 100 ? '#dc2626' : pct >= 80 ? '#d97706' : '#40916C'
+                    return (
+                      <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, fontSize: 12 }}>
+                        <div style={{ width: 70, fontWeight: 600, color: '#1B4332', flexShrink: 0 }}>{c.name}</div>
+                        <div style={{ flex: 1, height: 8, background: '#f3f4f6', borderRadius: 4, overflow: 'hidden' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 4, transition: 'width 0.3s' }} />
+                        </div>
+                        <div style={{ width: 60, textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color, fontWeight: 600 }}>
+                          {c.eleveCount}/{CAPACITY}
+                        </div>
+                      </div>
+                    )
+                  })}
+              </div>
+            </div>
+
+            {/* Section 3 — Classes à problèmes */}
+            <div style={{ background: '#fff', border: '1px solid #d1fae5', borderRadius: 12, overflow: 'hidden', marginBottom: 14 }}>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid #d1fae5', fontWeight: 700, fontSize: 13, color: '#1B4332' }}>
+                ⚠️ Classes à problèmes
+              </div>
+              <div style={{ padding: '14px 16px' }}>
+                {classes.filter(c => !c.teacher_id || c.eleveCount >= CAPACITY).length === 0 ? (
+                  <div style={{ color: '#40916C', fontWeight: 600, fontSize: 13, textAlign: 'center', padding: '12px 0' }}>
+                    ✅ Toutes les classes sont en ordre
+                  </div>
+                ) : (
+                  classes.filter(c => !c.teacher_id || c.eleveCount >= CAPACITY).map(c => (
+                    <div key={c.id} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 12,
+                    }}>
+                      <div style={{ fontWeight: 600, color: '#1B4332' }}>{c.name}</div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {!c.teacher_id && <Badge variant="orange">⚠ Sans maître</Badge>}
+                        {c.eleveCount >= CAPACITY && <Badge variant="rouge">🔴 Pleine</Badge>}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Colonne droite */}
+          <div>
+            {/* Section 2 — Effectifs par niveau */}
+            <div style={{ background: '#fff', border: '1px solid #d1fae5', borderRadius: 12, overflow: 'hidden', marginBottom: 14 }}>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid #d1fae5', fontWeight: 700, fontSize: 13, color: '#1B4332' }}>
+                👦 Effectifs par niveau
+              </div>
+              <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[
+                  { cat: 'Primaire', color: '#1B4332', bg: '#f0faf3', border: '#D8F3DC', icon: '🌱' },
+                  { cat: 'Collège', color: '#1e40af', bg: '#eff6ff', border: '#bfdbfe', icon: '📘' },
+                  { cat: 'Lycée', color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', icon: '🎓' },
+                ].map(({ cat, color, bg, border, icon }) => {
+                  const classesInCat = classes.filter(c => getLevelCategory(c.level) === cat)
+                  const elevesInCat = classesInCat.reduce((s, c) => s + c.eleveCount, 0)
+                  return (
+                    <div key={cat} style={{ background: bg, border: `1px solid ${border}`, borderRadius: 9, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 18 }}>{icon}</span>
+                        <div>
+                          <div style={{ fontWeight: 700, color, fontSize: 13 }}>{cat}</div>
+                          <div style={{ fontSize: 11, color: '#6b7280' }}>{classesInCat.length} classe{classesInCat.length !== 1 ? 's' : ''}</div>
+                        </div>
+                      </div>
+                      <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 22, fontWeight: 600, color }}>{elevesInCat}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Section 4 — Synthèse globale */}
+            <div style={{ background: '#fff', border: '1px solid #d1fae5', borderRadius: 12, overflow: 'hidden', marginBottom: 14 }}>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid #d1fae5', fontWeight: 700, fontSize: 13, color: '#1B4332' }}>
+                📈 Synthèse globale
+              </div>
+              <div style={{ padding: '14px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {[
+                  { label: 'Total classes', value: classes.length, icon: '🏫' },
+                  { label: 'Total élèves', value: totalEleves, icon: '👦' },
+                  { label: 'Remplissage moyen', value: `${moyenneRemplissage}%`, icon: '📊' },
+                  { label: 'Classes avec maître', value: classes.filter(c => c.teacher_id).length, icon: '👨‍🏫' },
+                  { label: 'Sans maître', value: classesSansMaitre, icon: '⚠️' },
+                  { label: 'Places disponibles', value: classes.reduce((s, c) => s + Math.max(0, CAPACITY - c.eleveCount), 0), icon: '💺' },
+                ].map(({ label, value, icon }) => (
+                  <div key={label} style={{ background: '#f0faf3', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>{icon}</span>
+                    <div>
+                      <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 20, fontWeight: 600, color: '#1B4332', lineHeight: 1.1 }}>{value}</div>
+                      <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>{label}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
