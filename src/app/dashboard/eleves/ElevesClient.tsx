@@ -332,7 +332,7 @@ export default function ElevesClient({
   // RENDER
   // ─────────────────────────────────────
   return (
-    <div style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 13, color: '#0d1f16' }}>
+    <div style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 13, color: '#0d1f16', paddingBottom: isMobile ? 80 : 0 }}>
 
       {/* ── En-tête de page ── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18, flexDirection: isMobile ? 'column' : 'row', gap: 10 }}>

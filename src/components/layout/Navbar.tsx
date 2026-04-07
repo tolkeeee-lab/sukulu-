@@ -7,11 +7,9 @@ interface NavbarProps {
   fullName: string
   role: string
   schoolName?: string
-  onMenuToggle: () => void
-  menuOpen: boolean
 }
 
-export default function Navbar({ fullName, role, schoolName, onMenuToggle, menuOpen }: NavbarProps) {
+export default function Navbar({ fullName, role, schoolName }: NavbarProps) {
   const isMobile = useIsMobile()
 
   return (
@@ -166,30 +164,6 @@ export default function Navbar({ fullName, role, schoolName, onMenuToggle, menuO
         >
           {getInitials(fullName)}
         </div>
-
-        {/* Bouton hamburger — visible sur mobile uniquement */}
-        {isMobile && (
-          <button
-            onClick={onMenuToggle}
-            aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-            style={{
-              width: 36,
-              height: 36,
-              background: menuOpen ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)',
-              border: 'none',
-              borderRadius: 7,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              color: '#ffffff',
-              fontSize: 18,
-              flexShrink: 0,
-            }}
-          >
-            {menuOpen ? '✕' : '☰'}
-          </button>
-        )}
       </div>
     </header>
   )
