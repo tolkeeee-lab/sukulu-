@@ -19,7 +19,7 @@ export default async function NotesPage() {
     .single()
 
   const schoolId = profile?.school_id
-  if (!schoolId) return <div style={{ padding: 24, color: '#dc2626' }}>École introuvable</div>
+  if (!schoolId || !profile) return <div style={{ padding: 24, color: '#dc2626' }}>École introuvable</div>
 
   const now = new Date()
   const y = now.getFullYear()

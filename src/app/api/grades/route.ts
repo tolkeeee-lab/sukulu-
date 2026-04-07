@@ -42,6 +42,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Champs obligatoires manquants' }, { status: 400 })
   }
 
+  const maxGrade = body.max_grade ?? 20
+  if (body.grade < 0 || body.grade > maxGrade) {
+    return NextResponse.json({ error: `La note doit être comprise entre 0 et ${maxGrade}` }, { status: 400 })
+  }
+
   const supabase = getSupabase()
 
   // Vérifier si une note existe déjà pour (student_id, subject_id, trimestre, school_id)

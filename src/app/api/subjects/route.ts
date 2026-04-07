@@ -34,8 +34,8 @@ export async function POST(req: NextRequest) {
     class_id: string | null
   }
 
-  if (!body.name || !body.coefficient) {
-    return NextResponse.json({ error: 'Champs obligatoires manquants' }, { status: 400 })
+  if (!body.name || !body.coefficient || body.coefficient < 1 || body.coefficient > 9) {
+    return NextResponse.json({ error: 'Champs obligatoires manquants ou coefficient invalide (1-9)' }, { status: 400 })
   }
 
   const supabase = getSupabase()
