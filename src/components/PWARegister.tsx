@@ -13,8 +13,7 @@ export default function PWARegister() {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker
         .register('/sw.js')
-        .then((reg) => console.log('SW registered:', reg.scope))
-        .catch((err) => console.log('SW error:', err))
+        .catch((err) => console.error('SW registration error:', err))
     }
 
     // Détecter si déjà installé (mode standalone)

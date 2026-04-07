@@ -19,14 +19,21 @@ export const metadata: Metadata = {
     title: 'Sukulu — Gestion Scolaire',
     description: 'Plateforme de gestion scolaire pour les écoles africaines',
   },
+  icons: {
+    icon: [{ url: '/icons/icon-192.svg', type: 'image/svg+xml' }],
+    apple: '/icons/icon-192.svg',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'msapplication-TileColor': '#1B4332',
+    'msapplication-tap-highlight': 'no',
+  },
 }
 
 export const viewport: Viewport = {
   themeColor: '#1B4332',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: 'cover',
 }
 
@@ -37,19 +44,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr">
-      <head>
-        {/* PWA Meta Tags */}
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Sukulu" />
-        <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
-        <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg" />
-        {/* Splash screens iOS */}
-        <meta name="msapplication-TileColor" content="#1B4332" />
-        <meta name="msapplication-tap-highlight" content="no" />
-      </head>
       <body>
         <PWARegister />
         {children}
