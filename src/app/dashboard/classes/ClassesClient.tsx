@@ -861,24 +861,27 @@ export default function ClassesClient({
                 ⚠️ Classes à problèmes
               </div>
               <div style={{ padding: '14px 16px' }}>
-                {classes.filter(c => !c.teacher_id || c.eleveCount >= CAPACITY).length === 0 ? (
-                  <div style={{ color: '#40916C', fontWeight: 600, fontSize: 13, textAlign: 'center', padding: '12px 0' }}>
-                    ✅ Toutes les classes sont en ordre
-                  </div>
-                ) : (
-                  classes.filter(c => !c.teacher_id || c.eleveCount >= CAPACITY).map(c => (
-                    <div key={c.id} style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 12,
-                    }}>
-                      <div style={{ fontWeight: 600, color: '#1B4332' }}>{c.name}</div>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        {!c.teacher_id && <Badge variant="orange">⚠ Sans maître</Badge>}
-                        {c.eleveCount >= CAPACITY && <Badge variant="rouge">🔴 Pleine</Badge>}
-                      </div>
+                {(() => {
+                  const problematic = classes.filter(c => !c.teacher_id || c.eleveCount >= CAPACITY)
+                  return problematic.length === 0 ? (
+                    <div style={{ color: '#40916C', fontWeight: 600, fontSize: 13, textAlign: 'center', padding: '12px 0' }}>
+                      ✅ Toutes les classes sont en ordre
                     </div>
-                  ))
-                )}
+                  ) : (
+                    problematic.map(c => (
+                      <div key={c.id} style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 12,
+                      }}>
+                        <div style={{ fontWeight: 600, color: '#1B4332' }}>{c.name}</div>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          {!c.teacher_id && <Badge variant="orange">⚠ Sans maître</Badge>}
+                          {c.eleveCount >= CAPACITY && <Badge variant="rouge">🔴 Pleine</Badge>}
+                        </div>
+                      </div>
+                    ))
+                  )
+                })()}
               </div>
             </div>
           </div>
