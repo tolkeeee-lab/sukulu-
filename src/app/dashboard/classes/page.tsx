@@ -48,7 +48,7 @@ export default async function ClassesPage() {
 
   if (!schoolId) return <div>École introuvable</div>
 
-  const [classesRes, studentsCountRes, enseignantsRes, classesSansMailtreRes, studentsPerClassRes] =
+  const [classesRes, studentsCountRes, enseignantsRes, classesSansMaitreRes, studentsPerClassRes] =
     await Promise.all([
       supabase
         .from('classes')
@@ -126,7 +126,7 @@ export default async function ClassesPage() {
       classes={classes}
       enseignants={enseignants}
       totalEleves={studentsCountRes.count ?? 0}
-      classesSansMaitre={classesSansMailtreRes.count ?? 0}
+      classesSansMaitre={classesSansMaitreRes.count ?? 0}
       schoolYear={schoolYear}
       schoolName={school?.name ?? ''}
     />

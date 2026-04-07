@@ -197,7 +197,6 @@ export default function ClassesClient({
   const [formName, setFormName] = useState('')
   const [formLevel, setFormLevel] = useState('')
   const [formTeacherId, setFormTeacherId] = useState('')
-  const [formCapacity, setFormCapacity] = useState(CAPACITY)
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const selectedClasse = classes.find(c => c.id === selectedClasseId) ?? null
@@ -254,7 +253,6 @@ export default function ClassesClient({
     setFormName('')
     setFormLevel('')
     setFormTeacherId('')
-    setFormCapacity(CAPACITY)
     setModalMode('create')
   }
 
@@ -263,7 +261,6 @@ export default function ClassesClient({
     setFormName(c.name)
     setFormLevel(c.level ?? '')
     setFormTeacherId(c.teacher_id ?? '')
-    setFormCapacity(CAPACITY)
     setModalMode('edit')
   }
 
@@ -295,7 +292,7 @@ export default function ClassesClient({
       })
       if (!res.ok) throw new Error('Erreur')
       const { classe } = await res.json() as { classe: Classe }
-      const teacher = enseignants.find(e => e.id === (formTeacherId || null))
+      const teacher = enseignants.find(e => e.id === formTeacherId)
       const newClasse: Classe = {
         ...classe,
         teacherName: teacher?.full_name ?? null,
@@ -857,16 +854,6 @@ export default function ClassesClient({
               <option value="">— Aucun pour l&apos;instant —</option>
               {enseignants.map(e => <option key={e.id} value={e.id}>{e.full_name}</option>)}
             </select>
-          </FormField>
-          <FormField label="Capacité max">
-            <input
-              style={inputStyle}
-              type="number"
-              min={1}
-              max={200}
-              value={formCapacity}
-              onChange={e => setFormCapacity(Number(e.target.value))}
-            />
           </FormField>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
             <Button variant="outline" onClick={closeModal}>Annuler</Button>
