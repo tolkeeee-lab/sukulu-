@@ -21,6 +21,12 @@ export default async function NotesPage() {
   const schoolId = profile?.school_id
   if (!schoolId || !profile) return <div style={{ padding: 24, color: '#dc2626' }}>École introuvable</div>
 
+  const { data: schoolData } = await supabase
+    .from('schools')
+    .select('name')
+    .eq('id', schoolId)
+    .single()
+
   const now = new Date()
   const y = now.getFullYear()
   const schoolYear = now.getMonth() + 1 >= 9 ? `${y}-${y + 1}` : `${y - 1}-${y}`
@@ -53,6 +59,7 @@ export default async function NotesPage() {
     <NotesClient
       schoolId={schoolId}
       schoolYear={schoolYear}
+      schoolName={schoolData?.name ?? ''}
       userId={userId}
       userRole={profile.role ?? 'teacher'}
       classes={classesRes.data ?? []}
