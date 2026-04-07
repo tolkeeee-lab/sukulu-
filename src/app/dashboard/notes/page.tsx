@@ -31,7 +31,7 @@ export default async function NotesPage() {
   const y = now.getFullYear()
   const schoolYear = now.getMonth() + 1 >= 9 ? `${y}-${y + 1}` : `${y - 1}-${y}`
 
-  const [classesRes, subjectsRes, gradesRes, studentsRes] = await Promise.all([
+  const [classesRes, subjectsRes, gradesRes, studentsRes, teachersRes] = await Promise.all([
     supabase
       .from('classes')
       .select('id, name, level, teacher_id')
@@ -53,6 +53,10 @@ export default async function NotesPage() {
       .eq('school_year', schoolYear)
       .eq('is_archived', false)
       .order('last_name'),
+    supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('school_id', schoolId),
   ])
 
   return (
@@ -66,6 +70,7 @@ export default async function NotesPage() {
       subjects={subjectsRes.data ?? []}
       grades={gradesRes.data ?? []}
       students={studentsRes.data ?? []}
+      teachers={teachersRes.data ?? []}
     />
   )
 }

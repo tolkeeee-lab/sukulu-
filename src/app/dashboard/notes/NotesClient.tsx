@@ -20,7 +20,10 @@ interface NotesClientProps {
   subjects: Subject[]
   grades: Grade[]
   students: Student[]
+  teachers: Teacher[]
 }
+
+type Teacher = { id: string; full_name: string }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -59,18 +62,18 @@ function getBarColor(n: number): string {
 // ─── Static Demo Data ─────────────────────────────────────────────────────────
 
 const DEMO_CLASSES = [
-  { nom: 'CP', maitre: 'Mme Sohou Alice', eleves: 32, pct: 100, publie: true, moy: 15.1, niveau: 'Primaire' },
-  { nom: 'CM2-A', maitre: 'M. Agossou Didier', eleves: 38, pct: 100, publie: true, moy: 14.8, niveau: 'Primaire' },
-  { nom: 'CM2-B', maitre: 'Mme Tossou Béatrice', eleves: 36, pct: 85, publie: true, moy: 13.5, niveau: 'Primaire' },
-  { nom: 'CM1-A', maitre: 'M. Dossou René', eleves: 40, pct: 75, publie: false, moy: 12.8, niveau: 'Primaire' },
-  { nom: 'CE2-A', maitre: 'Mme Gnanli Rose', eleves: 50, pct: 60, publie: false, moy: 11.9, niveau: 'Primaire' },
-  { nom: 'CE1-A', maitre: 'Non assigné', eleves: 34, pct: 0, publie: false, moy: null, niveau: 'Primaire' },
-  { nom: '6e-A', maitre: 'M. Koffi Marc', eleves: 42, pct: 90, publie: true, moy: 12.9, niveau: 'Collège' },
-  { nom: '5e-B', maitre: 'Mme Ahounou Afi', eleves: 38, pct: 95, publie: true, moy: 13.5, niveau: 'Collège' },
-  { nom: '4e-A', maitre: 'M. Zannou Roland', eleves: 50, pct: 70, publie: false, moy: 12.4, niveau: 'Collège' },
-  { nom: '3e-B', maitre: 'M. Tchékpo', eleves: 36, pct: 100, publie: true, moy: 13.8, niveau: 'Collège' },
-  { nom: '2nde-A', maitre: 'Non assigné', eleves: 0, pct: 0, publie: false, moy: null, niveau: 'Lycée' },
-  { nom: '1ère-C', maitre: 'Non assigné', eleves: 0, pct: 0, publie: false, moy: null, niveau: 'Lycée' },
+  { id: '', nom: 'CP', maitre: 'Mme Sohou Alice', eleves: 32, pct: 100, publie: true, moy: 15.1, niveau: 'Primaire' },
+  { id: '', nom: 'CM2-A', maitre: 'M. Agossou Didier', eleves: 38, pct: 100, publie: true, moy: 14.8, niveau: 'Primaire' },
+  { id: '', nom: 'CM2-B', maitre: 'Mme Tossou Béatrice', eleves: 36, pct: 85, publie: true, moy: 13.5, niveau: 'Primaire' },
+  { id: '', nom: 'CM1-A', maitre: 'M. Dossou René', eleves: 40, pct: 75, publie: false, moy: 12.8, niveau: 'Primaire' },
+  { id: '', nom: 'CE2-A', maitre: 'Mme Gnanli Rose', eleves: 50, pct: 60, publie: false, moy: 11.9, niveau: 'Primaire' },
+  { id: '', nom: 'CE1-A', maitre: 'Non assigné', eleves: 34, pct: 0, publie: false, moy: null, niveau: 'Primaire' },
+  { id: '', nom: '6e-A', maitre: 'M. Koffi Marc', eleves: 42, pct: 90, publie: true, moy: 12.9, niveau: 'Collège' },
+  { id: '', nom: '5e-B', maitre: 'Mme Ahounou Afi', eleves: 38, pct: 95, publie: true, moy: 13.5, niveau: 'Collège' },
+  { id: '', nom: '4e-A', maitre: 'M. Zannou Roland', eleves: 50, pct: 70, publie: false, moy: 12.4, niveau: 'Collège' },
+  { id: '', nom: '3e-B', maitre: 'M. Tchékpo', eleves: 36, pct: 100, publie: true, moy: 13.8, niveau: 'Collège' },
+  { id: '', nom: '2nde-A', maitre: 'Non assigné', eleves: 0, pct: 0, publie: false, moy: null, niveau: 'Lycée' },
+  { id: '', nom: '1ère-C', maitre: 'Non assigné', eleves: 0, pct: 0, publie: false, moy: null, niveau: 'Lycée' },
 ]
 
 const DEMO_CLASSES_LIST = DEMO_CLASSES.map(c => c.nom)
@@ -174,11 +177,12 @@ function SaisieChip({ pct }: { pct: number }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function NotesClient({ schoolId, schoolYear, schoolName, userId, userRole, classes, subjects, grades, students }: NotesClientProps) {
+export default function NotesClient({ schoolId, schoolYear, schoolName, userId, userRole, classes, subjects, grades, students, teachers }: NotesClientProps) {
   const isMobile = useIsMobile()
 
   const [activeTab, setActiveTab] = useState<'overview' | 'notes' | 'bulletins' | 'apercu' | 'stats'>('overview')
   const [selectedTrimestre, setSelectedTrimestre] = useState<1 | 2 | 3>(2)
+  const [selectedClasseId, setSelectedClasseId] = useState(() => classes[0]?.id ?? '')
   const [selectedClasseDemo, setSelectedClasseDemo] = useState('CM2-A')
   const [selectedBulletinEleve, setSelectedBulletinEleve] = useState('adjoua')
   const [toast, setToast] = useState<string | null>(null)
@@ -199,14 +203,213 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
     return () => { if (toastTimer.current) clearTimeout(toastTimer.current) }
   }, [])
 
+  // ── Real-data flag ──────────────────────────────────────────────────────────
+  const hasRealData = classes.length > 0
+
+  // ── Per-class computed stats from real data ─────────────────────────────────
+  const classStats = useMemo(() => {
+    return classes.map(cls => {
+      const classStudents = students.filter(s => s.class_id === cls.id)
+      const classSubjects = subjects.filter(s => s.class_id === cls.id)
+      const trimGrades = grades.filter(g => g.class_id === cls.id && g.trimestre === selectedTrimestre)
+
+      const nbStudents = classStudents.length
+      const nbSubjects = classSubjects.length
+      const totalExpected = nbStudents * nbSubjects
+
+      const gradedPairs = new Set(trimGrades.map(g => `${g.student_id}|${g.subject_id}`))
+      const pct = totalExpected > 0 ? Math.round((gradedPairs.size / totalExpected) * 100) : 0
+
+      const gradesNorm = trimGrades.map(g => (g.grade / g.max_grade) * 20)
+      const moy = gradesNorm.length > 0
+        ? Math.round((gradesNorm.reduce((a, b) => a + b, 0) / gradesNorm.length) * 10) / 10
+        : null
+
+      const teacher = teachers.find(t => t.id === cls.teacher_id)
+
+      return {
+        id: cls.id,
+        nom: cls.name,
+        maitre: teacher?.full_name ?? 'Non assigné',
+        eleves: nbStudents,
+        pct,
+        moy,
+        niveau: cls.level ?? 'Autre',
+        publie: pct === 100 && nbStudents > 0,
+      }
+    })
+  }, [classes, students, subjects, grades, selectedTrimestre, teachers])
+
+  // ── School-wide KPI stats ───────────────────────────────────────────────────
+  const schoolStats = useMemo(() => {
+    if (!hasRealData) return null
+    const trimGrades = grades.filter(g => g.trimestre === selectedTrimestre)
+
+    let totalExpected = 0
+    let totalSaisies = 0
+    for (const cls of classes) {
+      const nbStu = students.filter(s => s.class_id === cls.id).length
+      const nbSub = subjects.filter(s => s.class_id === cls.id).length
+      totalExpected += nbStu * nbSub
+      const pairs = new Set(
+        trimGrades.filter(g => g.class_id === cls.id).map(g => `${g.student_id}|${g.subject_id}`)
+      )
+      totalSaisies += pairs.size
+    }
+
+    const pctSaisies = totalExpected > 0 ? Math.round((totalSaisies / totalExpected) * 100) : 0
+
+    const gradesNorm = trimGrades.map(g => (g.grade / g.max_grade) * 20)
+    const moyEcoleN = gradesNorm.length > 0
+      ? Math.round((gradesNorm.reduce((a, b) => a + b, 0) / gradesNorm.length) * 10) / 10
+      : null
+    const moyEcoleStr = moyEcoleN !== null ? moyEcoleN.toFixed(1).replace('.', ',') : '—'
+
+    // T1 vs T2 diff for badge
+    const t1Grades = grades.filter(g => g.trimestre === 1).map(g => (g.grade / g.max_grade) * 20)
+    const t2Grades = grades.filter(g => g.trimestre === 2).map(g => (g.grade / g.max_grade) * 20)
+    const moyT1 = t1Grades.length > 0 ? t1Grades.reduce((a, b) => a + b, 0) / t1Grades.length : null
+    const moyT2 = t2Grades.length > 0 ? t2Grades.reduce((a, b) => a + b, 0) / t2Grades.length : null
+    const diff = moyT1 !== null && moyT2 !== null ? Math.round((moyT2 - moyT1) * 10) / 10 : null
+    const diffStr = diff !== null ? `${diff >= 0 ? '+' : ''}${diff.toFixed(1)} pt` : '—'
+
+    const classesSansNotes = classes.filter(cls => !trimGrades.some(g => g.class_id === cls.id))
+    const nbPublies = classStats.filter(cs => cs.publie).length
+    const nbEnAttente = classStats.filter(cs => cs.pct > 0 && cs.pct < 100).length
+
+    return {
+      pctSaisies,
+      moyEcoleStr,
+      moyEcoleN,
+      nbPublies,
+      nbEnAttente,
+      nbSansNotes: classesSansNotes.length,
+      classesSansNotesNoms: classesSansNotes.map(c => c.name),
+      diffStr,
+    }
+  }, [classes, students, subjects, grades, selectedTrimestre, classStats, hasRealData])
+
+  // ── Selected class (Tab 2) ──────────────────────────────────────────────────
+  const selectedClassObj = useMemo(
+    () => classes.find(c => c.id === selectedClasseId) ?? null,
+    [classes, selectedClasseId]
+  )
+
+  const realClassNotes = useMemo(() => {
+    if (!selectedClassObj) return null
+    const classStudents = [...students.filter(s => s.class_id === selectedClassObj.id)]
+      .sort((a, b) => a.last_name.localeCompare(b.last_name))
+    const classSubjects = [...subjects.filter(s => s.class_id === selectedClassObj.id)]
+      .sort((a, b) => b.coefficient - a.coefficient)
+    const trimGrades = grades.filter(g => g.class_id === selectedClassObj.id && g.trimestre === selectedTrimestre)
+
+    const gradeMap = new Map<string, number>()
+    for (const g of trimGrades) {
+      gradeMap.set(`${g.student_id}|${g.subject_id}`, Math.round((g.grade / g.max_grade) * 20 * 10) / 10)
+    }
+
+    const studentRows = classStudents.map(s => {
+      const notes = classSubjects.map(sub => gradeMap.get(`${s.id}|${sub.id}`) ?? null)
+      const valid = notes
+        .map((n, i) => (n !== null ? { note: n, coef: classSubjects[i].coefficient } : null))
+        .filter(Boolean) as { note: number; coef: number }[]
+      const totalPts = valid.reduce((sum, x) => sum + x.note * x.coef, 0)
+      const totalCoef = valid.reduce((sum, x) => sum + x.coef, 0)
+      const moy = totalCoef > 0 ? Math.round((totalPts / totalCoef) * 10) / 10 : null
+      return { student: s, notes, moy }
+    })
+
+    const sorted = [...studentRows].sort((a, b) => (b.moy ?? -1) - (a.moy ?? -1))
+    const ranked = studentRows.map(row => ({
+      ...row,
+      rang: row.moy !== null ? sorted.findIndex(r => r.student.id === row.student.id) + 1 : null,
+    }))
+
+    const colAvgs = classSubjects.map((_, si) => {
+      const vals = ranked.map(r => r.notes[si]).filter((n): n is number => n !== null)
+      return vals.length > 0 ? Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10 : null
+    })
+
+    const totalExpected = classStudents.length * classSubjects.length
+    const pctSaisie = totalExpected > 0
+      ? Math.round((new Set(trimGrades.map(g => `${g.student_id}|${g.subject_id}`)).size / totalExpected) * 100)
+      : 0
+
+    const allMoys = ranked.map(r => r.moy).filter((m): m is number => m !== null)
+    const moyClasse = allMoys.length > 0
+      ? Math.round((allMoys.reduce((a, b) => a + b, 0) / allMoys.length) * 10) / 10
+      : null
+
+    return { classStudents, classSubjects, ranked, colAvgs, pctSaisie, moyClasse }
+  }, [selectedClassObj, students, subjects, grades, selectedTrimestre])
+
+  // ── Stats Tab — subject averages ────────────────────────────────────────────
+  const subjectAvgStats = useMemo(() => {
+    if (!hasRealData) return null
+    const trimGrades = grades.filter(g => g.trimestre === selectedTrimestre)
+    return subjects
+      .map(sub => {
+        const sg = trimGrades.filter(g => g.subject_id === sub.id)
+        if (sg.length === 0) return null
+        const avg = Math.round((sg.reduce((a, g) => a + (g.grade / g.max_grade) * 20, 0) / sg.length) * 10) / 10
+        return { mat: sub.name, moy: avg }
+      })
+      .filter(Boolean)
+      .sort((a, b) => (b!.moy ?? 0) - (a!.moy ?? 0)) as { mat: string; moy: number }[]
+  }, [subjects, grades, selectedTrimestre, hasRealData])
+
+  // ── Stats Tab — mention distribution ────────────────────────────────────────
+  const mentionDistribution = useMemo(() => {
+    if (!hasRealData) return null
+    const trimGrades = grades.filter(g => g.trimestre === selectedTrimestre)
+    const buckets = [
+      { label: 'Très Bien', min: 16, color: '#166534', bg: '#dcfce7' },
+      { label: 'Bien', min: 14, color: '#1e40af', bg: '#dbeafe' },
+      { label: 'Assez Bien', min: 12, color: '#854d0e', bg: '#fef9c3' },
+      { label: 'Passable', min: 10, color: '#9a3412', bg: '#ffedd5' },
+      { label: 'Insuffisant', min: 0, color: '#991b1b', bg: '#fee2e2' },
+    ]
+    const studentAvgs = students.map(s => {
+      const subs = subjects.filter(sub => sub.class_id === s.class_id)
+      const sg = trimGrades.filter(g => g.student_id === s.id)
+      if (sg.length === 0) return null
+      const totalPts = sg.reduce((sum, g) => {
+        const sub = subs.find(sub => sub.id === g.subject_id)
+        return sum + (g.grade / g.max_grade) * 20 * (sub?.coefficient ?? 1)
+      }, 0)
+      const totalCoef = sg.reduce((sum, g) => {
+        const sub = subs.find(sub => sub.id === g.subject_id)
+        return sum + (sub?.coefficient ?? 1)
+      }, 0)
+      return totalCoef > 0 ? totalPts / totalCoef : null
+    }).filter(Boolean) as number[]
+
+    return buckets.map((b, i) => ({
+      ...b,
+      count: studentAvgs.filter(avg => avg >= b.min && avg < (buckets[i - 1]?.min ?? 21)).length,
+    }))
+  }, [students, subjects, grades, selectedTrimestre, hasRealData])
+
+  // ── Stats Tab — trimester evolution ─────────────────────────────────────────
+  const trimesterEvol = useMemo(() => {
+    if (!hasRealData) return null
+    return [1, 2, 3].map(t => {
+      const tg = grades.filter(g => g.trimestre === t)
+      if (tg.length === 0) return null
+      const avg = Math.round((tg.reduce((a, g) => a + (g.grade / g.max_grade) * 20, 0) / tg.length) * 10) / 10
+      return avg
+    })
+  }, [grades, hasRealData])
+
   const filteredClasses = useMemo(() => {
-    return DEMO_CLASSES.filter(c => {
+    const source = hasRealData ? classStats : DEMO_CLASSES
+    return source.filter(c => {
       if (filterNiveau && c.niveau !== filterNiveau) return false
       if (filterStatut === 'publie' && !c.publie) return false
       if (filterStatut === 'non_publie' && c.publie) return false
       return true
     })
-  }, [filterNiveau, filterStatut])
+  }, [hasRealData, classStats, filterNiveau, filterStatut])
 
   const bulletin = DEMO_BULLETINS[selectedBulletinEleve]
 
@@ -215,7 +418,7 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
   const TABS = [
     { key: 'overview' as const, label: "🏫 Vue d'ensemble", badge: null },
     { key: 'notes' as const, label: '📝 Notes par classe', badge: null },
-    { key: 'bulletins' as const, label: '📊 Bulletins', badge: '7' },
+    { key: 'bulletins' as const, label: '📊 Bulletins', badge: hasRealData ? String(schoolStats?.nbEnAttente ?? 0) : '7' },
     { key: 'apercu' as const, label: '👁️ Aperçu bulletin', badge: null },
     { key: 'stats' as const, label: '📈 Statistiques', badge: null },
   ]
@@ -300,7 +503,10 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
                       : <span style={{ ...NC_BASE, background: '#fef3c7', color: '#d97706', fontSize: 10 }}>En attente</span>}
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => { setSelectedClasseDemo(cl.nom); setActiveTab('notes') }}
+                    <button onClick={() => {
+                      if (hasRealData) { setSelectedClasseId(cl.id ?? ''); } else { setSelectedClasseDemo(cl.nom); }
+                      setActiveTab('notes')
+                    }}
                       style={{ flex: 1, padding: '6px 0', borderRadius: 6, border: '1px solid #d1fae5', background: '#fff', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
                       📝 Notes
                     </button>
@@ -336,7 +542,10 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
                     : <span style={{ ...NC_BASE, background: '#fef3c7', color: '#d97706', fontSize: 10 }}>En attente</span>}
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
-                  <button onClick={() => { setSelectedClasseDemo(cl.nom); setActiveTab('notes') }}
+                  <button onClick={() => {
+                    if (hasRealData) { setSelectedClasseId(cl.id ?? ''); } else { setSelectedClasseDemo(cl.nom); }
+                    setActiveTab('notes')
+                  }}
                     style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid #d1fae5', background: '#fff', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
                     📝 Notes
                   </button>
@@ -363,6 +572,128 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
   // ─── TAB 2: NOTES PAR CLASSE ──────────────────────────────────────────────
 
   function renderNotes() {
+    // ── Real data branch ──
+    if (hasRealData && realClassNotes) {
+      const { classSubjects, ranked, colAvgs, pctSaisie, moyClasse } = realClassNotes
+      const nomClasse = selectedClassObj?.name ?? '—'
+      const classesList = classes
+
+      return (
+        <div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap', flexDirection: isMobile ? 'column' : 'row' }}>
+            <select value={selectedClasseId} onChange={e => setSelectedClasseId(e.target.value)}
+              style={{ padding: '7px 10px', border: '1px solid #d1fae5', borderRadius: 7, fontSize: 12, background: '#fff', fontFamily: 'inherit', width: isMobile ? '100%' : 'auto' }}>
+              {classesList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            {[1, 2, 3].map(t => (
+              <button key={t} onClick={() => setSelectedTrimestre(t as 1 | 2 | 3)} style={{
+                padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer',
+                border: `1.5px solid ${selectedTrimestre === t ? '#1B4332' : '#d1fae5'}`,
+                background: selectedTrimestre === t ? '#1B4332' : '#ffffff',
+                color: selectedTrimestre === t ? '#ffffff' : '#6b7280',
+                fontFamily: 'inherit',
+              }}>
+                {t === 1 ? '1er trim.' : `${t}e trim.`}
+              </button>
+            ))}
+            <button style={{ padding: '7px 13px', borderRadius: 7, border: '1px solid #d1fae5', background: '#fff', color: '#6b7280', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', width: isMobile ? '100%' : 'auto' }}
+              onClick={() => showToast('Export en cours...')}>
+              📄 Exporter
+            </button>
+            <button onClick={() => setShowNoteModal(true)}
+              style={{ padding: '7px 14px', borderRadius: 7, border: 'none', background: '#1B4332', color: '#fff', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500, width: isMobile ? '100%' : 'auto' }}>
+              + Saisir une note
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+            {[
+              { icon: '👥', val: String(realClassNotes.classStudents.length), label: 'Élèves' },
+              { icon: '📊', val: moyClasse !== null ? moyClasse.toFixed(1).replace('.', ',') : '—', label: 'Moyenne' },
+              { icon: '✅', val: `${pctSaisie}%`, label: 'Notes saisies' },
+            ].map(s => (
+              <div key={s.label} style={{ background: '#fff', border: '1px solid #d1fae5', borderRadius: 8, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8, flex: '1 1 100px' }}>
+                <span style={{ fontSize: 18 }}>{s.icon}</span>
+                <div>
+                  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: '#1B4332' }}>{s.val}</div>
+                  <div style={{ fontSize: 10, color: '#6b7280' }}>{s.label}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#1B4332' }}>
+              📝 Notes — {nomClasse} · {trimLabel(selectedTrimestre)} Trimestre
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => showToast('Notes validées ✓')}
+                style={{ padding: '6px 12px', borderRadius: 7, border: 'none', background: '#D8F3DC', color: '#1B4332', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>
+                ✅ Valider tout
+              </button>
+              <button onClick={() => setActiveTab('apercu')}
+                style={{ padding: '6px 12px', borderRadius: 7, border: 'none', background: '#1B4332', color: '#fff', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>
+                📊 Voir bulletin
+              </button>
+            </div>
+          </div>
+
+          {ranked.length === 0 ? (
+            <div style={{ padding: 32, textAlign: 'center', color: '#6b7280', fontSize: 13 }}>Aucun élève inscrit dans cette classe.</div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ minWidth: 700, width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr style={{ background: '#f3f4f6' }}>
+                    <th style={{ padding: '8px 10px', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', fontWeight: 600, color: '#6b7280', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: '#f3f4f6', zIndex: 1 }}>Élève</th>
+                    {classSubjects.map(sub => (
+                      <th key={sub.id} style={{ padding: '8px 8px', textAlign: 'center', fontSize: 9, textTransform: 'uppercase', fontWeight: 600, color: '#6b7280', whiteSpace: 'nowrap' }}>
+                        {sub.name}<br /><span style={{ fontWeight: 400 }}>coef {sub.coefficient}</span>
+                      </th>
+                    ))}
+                    <th style={{ padding: '8px 8px', textAlign: 'center', fontSize: 9, textTransform: 'uppercase', fontWeight: 600, color: '#6b7280', whiteSpace: 'nowrap' }}>Moy. gén.</th>
+                    <th style={{ padding: '8px 8px', textAlign: 'center', fontSize: 9, textTransform: 'uppercase', fontWeight: 600, color: '#6b7280' }}>Rang</th>
+                    <th style={{ padding: '8px 8px', textAlign: 'center', fontSize: 9, textTransform: 'uppercase', fontWeight: 600, color: '#6b7280' }}>Mention</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ranked.map((row, ri) => {
+                    const mi = row.moy !== null ? mentionInfo(row.moy) : null
+                    const nom = `${row.student.last_name} ${row.student.first_name}`
+                    return (
+                      <tr key={row.student.id} style={{ borderBottom: '1px solid #f0f0f0', background: ri % 2 === 0 ? '#fff' : '#fafafa' }}>
+                        <td style={{ padding: '8px 10px', fontWeight: 500, color: '#1B4332', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: ri % 2 === 0 ? '#fff' : '#fafafa', zIndex: 1 }}>{nom}</td>
+                        {row.notes.map((n, ni) => (
+                          <td key={ni} style={{ padding: '8px 8px', textAlign: 'center' }}><NcChip v={n} /></td>
+                        ))}
+                        <td style={{ padding: '8px 8px', textAlign: 'center' }}><NcChip v={row.moy} /></td>
+                        <td style={{ padding: '8px 8px', textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: '#1B4332' }}>
+                          {row.rang ?? '—'}
+                        </td>
+                        <td style={{ padding: '8px 8px', textAlign: 'center' }}>
+                          {mi ? <span style={{ ...NC_BASE, background: mi.bg, color: mi.color, fontSize: 10 }}>{mi.label}</span> : <span style={{ color: '#9ca3af' }}>—</span>}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr style={{ background: '#f0faf3', borderTop: '2px solid #d1fae5' }}>
+                    <td style={{ padding: '8px 10px', fontSize: 11, fontWeight: 600, color: '#1B4332', position: 'sticky', left: 0, background: '#f0faf3', zIndex: 1 }}>Moy. classe</td>
+                    {colAvgs.map((avg, i) => (
+                      <td key={i} style={{ padding: '8px 8px', textAlign: 'center' }}><NcChip v={avg} /></td>
+                    ))}
+                    <td colSpan={3} />
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    // ── Demo data branch ──
     const colAvgs = DEMO_MATIERES.map((_, mi) => {
       const vals = DEMO_ELEVES.map(e => e.notes[mi])
       return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10
@@ -480,12 +811,18 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
   // ─── TAB 3: BULLETINS ────────────────────────────────────────────────────
 
   function renderBulletins() {
+    const bulletinClasses = hasRealData ? classStats : DEMO_CLASSES
+    const bulletinClassNames = bulletinClasses.map(c => c.nom)
+    const nbPublies = hasRealData ? (schoolStats?.nbPublies ?? 0) : 5
+    const nbEnAttente = hasRealData ? (schoolStats?.nbEnAttente ?? 0) : 7
+    const nbSansNotes = hasRealData ? (schoolStats?.nbSansNotes ?? 0) : 3
+
     return (
       <div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap', flexDirection: isMobile ? 'column' : 'row' }}>
           <select style={{ padding: '7px 10px', border: '1px solid #d1fae5', borderRadius: 7, fontSize: 12, background: '#fff', fontFamily: 'inherit', width: isMobile ? '100%' : 'auto' }}>
             <option>Toutes les classes</option>
-            {DEMO_CLASSES_LIST.map(c => <option key={c}>{c}</option>)}
+            {bulletinClassNames.map(c => <option key={c}>{c}</option>)}
           </select>
           <select style={{ padding: '7px 10px', border: '1px solid #d1fae5', borderRadius: 7, fontSize: 12, background: '#fff', fontFamily: 'inherit', width: isMobile ? '100%' : 'auto' }}>
             <option>Tous les statuts</option>
@@ -503,12 +840,12 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
         </div>
 
         <div style={{ fontSize: 13, fontWeight: 600, color: '#1B4332', marginBottom: 10 }}>
-          📊 Gestion des bulletins — {trimLabel(selectedTrimestre)} Trimestre &nbsp;|&nbsp; 5 publiés · 7 en attente · 3 sans notes
+          📊 Gestion des bulletins — {trimLabel(selectedTrimestre)} Trimestre &nbsp;|&nbsp; {nbPublies} publiés · {nbEnAttente} en attente · {nbSansNotes} sans notes
         </div>
 
         {isMobile ? (
           <div>
-            {DEMO_CLASSES.map(cl => (
+            {bulletinClasses.map(cl => (
               <div key={cl.nom} style={{ background: '#fff', border: '1px solid #d1fae5', borderRadius: 10, padding: 12, marginBottom: 8 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                   <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 700, color: '#1B4332' }}>{cl.nom}</span>
@@ -542,7 +879,7 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
                 </tr>
               </thead>
               <tbody>
-                {DEMO_CLASSES.map((cl, i) => (
+                {bulletinClasses.map((cl, i) => (
                   <tr key={cl.nom} style={{ borderBottom: '1px solid #f0f0f0', background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
                     <td style={{ padding: '10px 10px', fontFamily: "'Playfair Display', serif", fontWeight: 700, color: '#1B4332' }}>{cl.nom}</td>
                     <td style={{ padding: '10px 10px', color: '#374151' }}>{cl.maitre}</td>
@@ -556,7 +893,7 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
                         ? <span style={{ ...NC_BASE, background: '#D8F3DC', color: '#1B4332', fontSize: 10 }}>✓ Publié</span>
                         : <span style={{ ...NC_BASE, background: '#fef3c7', color: '#d97706', fontSize: 10 }}>En attente</span>}
                     </td>
-                    <td style={{ padding: '10px 10px', color: '#6b7280', fontSize: 11 }}>Il y a 2 jours</td>
+                    <td style={{ padding: '10px 10px', color: '#6b7280', fontSize: 11 }}>—</td>
                     <td style={{ padding: '10px 10px' }}>
                       <div style={{ display: 'flex', gap: 5 }}>
                         <button onClick={() => setActiveTab('apercu')} style={{ padding: '4px 8px', borderRadius: 5, border: '1px solid #d1fae5', background: '#fff', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>👁️</button>
@@ -857,20 +1194,39 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
   // ─── TAB 5: STATISTIQUES ──────────────────────────────────────────────────
 
   function renderStats() {
-    const classesByMoy = [...DEMO_CLASSES].filter(c => c.moy !== null).sort((a, b) => (b.moy ?? 0) - (a.moy ?? 0))
-    const mentions = [
-      { label: 'Très Bien', count: 18, color: '#166534', bg: '#dcfce7' },
-      { label: 'Bien', count: 42, color: '#1e40af', bg: '#dbeafe' },
-      { label: 'Assez Bien', count: 75, color: '#854d0e', bg: '#fef9c3' },
-      { label: 'Passable', count: 68, color: '#9a3412', bg: '#ffedd5' },
-      { label: 'Insuffisant', count: 42, color: '#991b1b', bg: '#fee2e2' },
-    ]
-    const maxMentions = Math.max(...mentions.map(m => m.count))
-    const matMoys = [
-      { mat: 'EPS', moy: 13.1 }, { mat: 'Maths', moy: 12.8 }, { mat: 'SVT', moy: 12.3 },
-      { mat: 'EST', moy: 12.1 }, { mat: 'Français', moy: 11.8 }, { mat: 'Éveil', moy: 11.5 },
-      { mat: 'Dessin', moy: 11.2 }, { mat: 'Lg.Nat.', moy: 10.4 },
-    ]
+    // Class rankings
+    const classesByMoy = hasRealData
+      ? [...classStats].filter(c => c.moy !== null).sort((a, b) => (b.moy ?? 0) - (a.moy ?? 0))
+      : [...DEMO_CLASSES].filter(c => c.moy !== null).sort((a, b) => (b.moy ?? 0) - (a.moy ?? 0))
+
+    // Mention distribution
+    const mentions = hasRealData && mentionDistribution
+      ? mentionDistribution
+      : [
+        { label: 'Très Bien', count: 18, color: '#166534', bg: '#dcfce7' },
+        { label: 'Bien', count: 42, color: '#1e40af', bg: '#dbeafe' },
+        { label: 'Assez Bien', count: 75, color: '#854d0e', bg: '#fef9c3' },
+        { label: 'Passable', count: 68, color: '#9a3412', bg: '#ffedd5' },
+        { label: 'Insuffisant', count: 42, color: '#991b1b', bg: '#fee2e2' },
+      ]
+    const maxMentions = Math.max(...mentions.map(m => m.count), 1)
+
+    // Subject averages
+    const matMoys = hasRealData && subjectAvgStats && subjectAvgStats.length > 0
+      ? subjectAvgStats
+      : [
+        { mat: 'EPS', moy: 13.1 }, { mat: 'Maths', moy: 12.8 }, { mat: 'SVT', moy: 12.3 },
+        { mat: 'EST', moy: 12.1 }, { mat: 'Français', moy: 11.8 }, { mat: 'Éveil', moy: 11.5 },
+        { mat: 'Dessin', moy: 11.2 }, { mat: 'Lg.Nat.', moy: 10.4 },
+      ]
+
+    // Trimester evolution
+    const tEvol = hasRealData && trimesterEvol
+      ? trimesterEvol
+      : [12.3, 13.2, null]
+    const diff01 = tEvol[0] !== null && tEvol[1] !== null
+      ? Math.round((tEvol[1] - tEvol[0]) * 10) / 10
+      : null
 
     return (
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
@@ -927,16 +1283,22 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
               <tbody>
                 <tr>
                   <td style={{ padding: '10px', fontWeight: 600, color: '#1B4332' }}>Moy. école</td>
-                  <td style={{ padding: '10px', textAlign: 'center' }}><NcChip v={12.3} /></td>
-                  <td style={{ padding: '10px', textAlign: 'center' }}><NcChip v={13.2} /></td>
-                  <td style={{ padding: '10px', textAlign: 'center' }}><span style={{ ...NC_BASE, background: '#f3f4f6', color: '#6b7280', fontSize: 10 }}>En cours</span></td>
+                  {[0, 1, 2].map(ti => (
+                    <td key={ti} style={{ padding: '10px', textAlign: 'center' }}>
+                      {tEvol[ti] !== null
+                        ? <NcChip v={tEvol[ti] as number} />
+                        : <span style={{ ...NC_BASE, background: '#f3f4f6', color: '#6b7280', fontSize: 10 }}>En cours</span>}
+                    </td>
+                  ))}
                 </tr>
               </tbody>
             </table>
           </div>
-          <div style={{ background: '#f0faf3', border: '1px solid #d1fae5', borderRadius: 6, padding: '10px 14px', marginTop: 12, fontSize: 12, color: '#1B4332', fontWeight: 500 }}>
-            📈 +0,9 pt par rapport au T1
-          </div>
+          {diff01 !== null && (
+            <div style={{ background: '#f0faf3', border: '1px solid #d1fae5', borderRadius: 6, padding: '10px 14px', marginTop: 12, fontSize: 12, color: '#1B4332', fontWeight: 500 }}>
+              📈 {diff01 >= 0 ? '+' : ''}{diff01.toFixed(1)} pt par rapport au T1
+            </div>
+          )}
         </Card>
       </div>
     )
@@ -979,11 +1341,41 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
       {/* Stats row */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(5,1fr)', gap: 10, marginBottom: 16 }}>
         {[
-          { icon: '📝', val: '78%', lbl: 'Notes saisies', badge: '2e trim.', badgeBg: '#D8F3DC', badgeColor: '#1B4332' },
-          { icon: '📊', val: '13,2', lbl: 'Moy. générale école', badge: '+0,9 pts', badgeBg: '#dbeafe', badgeColor: '#1e40af' },
-          { icon: '✅', val: '5', lbl: 'Bulletins publiés', badge: '5 classes', badgeBg: '#D8F3DC', badgeColor: '#1B4332' },
-          { icon: '⏳', val: '7', lbl: 'Non publiés', badge: 'En cours', badgeBg: '#fef3c7', badgeColor: '#d97706' },
-          { icon: '🔴', val: '3', lbl: 'Classes sans notes', badge: 'À régler', badgeBg: '#fee2e2', badgeColor: '#dc2626' },
+          {
+            icon: '📝',
+            val: hasRealData ? `${schoolStats?.pctSaisies ?? 0}%` : '78%',
+            lbl: 'Notes saisies',
+            badge: `${trimLabel(selectedTrimestre)} trim.`,
+            badgeBg: '#D8F3DC', badgeColor: '#1B4332',
+          },
+          {
+            icon: '📊',
+            val: hasRealData ? (schoolStats?.moyEcoleStr ?? '—') : '13,2',
+            lbl: 'Moy. générale école',
+            badge: hasRealData ? (schoolStats?.diffStr ?? '—') : '+0,9 pts',
+            badgeBg: '#dbeafe', badgeColor: '#1e40af',
+          },
+          {
+            icon: '✅',
+            val: hasRealData ? String(schoolStats?.nbPublies ?? 0) : '5',
+            lbl: 'Bulletins publiés',
+            badge: `${hasRealData ? (schoolStats?.nbPublies ?? 0) : 5} classes`,
+            badgeBg: '#D8F3DC', badgeColor: '#1B4332',
+          },
+          {
+            icon: '⏳',
+            val: hasRealData ? String(schoolStats?.nbEnAttente ?? 0) : '7',
+            lbl: 'Non publiés',
+            badge: 'En cours',
+            badgeBg: '#fef3c7', badgeColor: '#d97706',
+          },
+          {
+            icon: '🔴',
+            val: hasRealData ? String(schoolStats?.nbSansNotes ?? 0) : '3',
+            lbl: 'Classes sans notes',
+            badge: 'À régler',
+            badgeBg: '#fee2e2', badgeColor: '#dc2626',
+          },
         ].map(s => (
           <div key={s.lbl} style={{ background: '#fff', border: '1px solid #d1fae5', borderRadius: 10, padding: isMobile ? '10px' : '13px 14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
@@ -997,10 +1389,18 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
       </div>
 
       {/* Orange alert */}
-      <div style={{ background: '#fff4ec', border: '1px solid #fed7aa', borderRadius: 8, padding: isMobile ? '8px 10px' : '10px 14px', marginBottom: 14, fontSize: isMobile ? 11 : 12, color: '#9a3412', display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-        <span>⚠️ <strong>CE1-A, 2nde-A, 1ère-C</strong> n'ont aucune note saisie ce trimestre. Relancez les enseignants.</span>
-        <span onClick={() => showToast('Relances envoyées !')} style={{ cursor: 'pointer', fontWeight: 600, textDecoration: 'underline', whiteSpace: 'nowrap' }}>Envoyer relances →</span>
-      </div>
+      {(() => {
+        const noNoteClasses = hasRealData
+          ? schoolStats?.classesSansNotesNoms ?? []
+          : ['CE1-A', '2nde-A', '1ère-C']
+        if (noNoteClasses.length === 0) return null
+        return (
+          <div style={{ background: '#fff4ec', border: '1px solid #fed7aa', borderRadius: 8, padding: isMobile ? '8px 10px' : '10px 14px', marginBottom: 14, fontSize: isMobile ? 11 : 12, color: '#9a3412', display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+            <span>⚠️ <strong>{noNoteClasses.join(', ')}</strong> n'ont aucune note saisie ce trimestre. Relancez les enseignants.</span>
+            <span onClick={() => showToast('Relances envoyées !')} style={{ cursor: 'pointer', fontWeight: 600, textDecoration: 'underline', whiteSpace: 'nowrap' }}>Envoyer relances →</span>
+          </div>
+        )
+      })()}
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 16, overflowX: 'auto', whiteSpace: isMobile ? 'nowrap' : 'normal', borderBottom: '2px solid #d1fae5' }}>
