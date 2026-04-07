@@ -386,7 +386,7 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
 
     return buckets.map((b, i) => ({
       ...b,
-      count: studentAvgs.filter(avg => avg >= b.min && avg < (buckets[i - 1]?.min ?? 21)).length,
+      count: studentAvgs.filter(avg => avg >= b.min && avg < (i === 0 ? 21 : buckets[i - 1].min)).length,
     }))
   }, [students, subjects, grades, selectedTrimestre, hasRealData])
 
