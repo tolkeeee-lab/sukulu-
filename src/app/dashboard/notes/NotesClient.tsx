@@ -503,7 +503,7 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
         </div>
 
         <div style={{ fontSize: 13, fontWeight: 600, color: '#1B4332', marginBottom: 10 }}>
-          📊 Gestion des bulletins — {trimLabel(selectedTrimestre)}e Trimestre &nbsp;|&nbsp; 5 publiés · 7 en attente · 3 sans notes
+          📊 Gestion des bulletins — {trimLabel(selectedTrimestre)} Trimestre &nbsp;|&nbsp; 5 publiés · 7 en attente · 3 sans notes
         </div>
 
         {isMobile ? (
@@ -645,13 +645,13 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
                 </div>
               </div>
               <span style={{ background: '#F4A261', color: '#1B4332', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 700, alignSelf: 'flex-start' }}>
-                Bulletin — {trimLabel(selectedTrimestre)}e Trimestre
+                Bulletin — {trimLabel(selectedTrimestre)} Trimestre
               </span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: 10, marginTop: 16 }}>
               {[
                 { label: 'Année scolaire', val: schoolYear || '2025-2026' },
-                { label: 'Trimestre', val: `${trimLabel(selectedTrimestre)}e Trimestre` },
+                { label: 'Trimestre', val: `${trimLabel(selectedTrimestre)} Trimestre` },
                 { label: "Date d'édition", val: today },
                 { label: 'N° Bulletin', val: bulletinNum },
               ].map(m => (
