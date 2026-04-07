@@ -719,7 +719,7 @@ export default function NotesClient({
                   {[
                     { label: 'Année scolaire', val: schoolYear },
                     { label: 'Classe', val: selectedClasse?.name ?? '—' },
-                    { label: 'Trimestre', val: `${selectedTrimestre}er trimestre` },
+                    { label: 'Trimestre', val: `${selectedTrimestre === 1 ? '1er' : `${selectedTrimestre}e`} trimestre` },
                     { label: "Date d'édition", val: new Date().toLocaleDateString('fr-FR') },
                   ].map(({ label, val }) => (
                     <div key={label} style={{ background: 'rgba(255,255,255,0.05)', padding: '8px 14px' }}>
@@ -964,7 +964,7 @@ export default function NotesClient({
                       <div style={{ flex: 1, height: 8, background: '#f3f4f6', borderRadius: 4, overflow: 'hidden' }}>
                         <div style={{ width: `${(c.moy / 20) * 100}%`, height: '100%', background: c.moy >= 14 ? '#40916C' : c.moy >= 10 ? '#d97706' : '#dc2626', borderRadius: 4 }} />
                       </div>
-                      <span style={{ width: 50, textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 600, color: c.moy >= 14 ? '#166534' : c.moy >= 10 ? '#d97706' : '#dc2626' }}>
+                      <span style={{ width: 50, textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 600, color: getNoteColor(c.moy) }}>
                         {c.moy > 0 ? `${c.moy.toFixed(1)}/20` : '—'}
                       </span>
                     </div>
