@@ -9,8 +9,6 @@ interface SidebarProps {
   fullName: string
   role: string
   schoolName?: string
-  isOpen: boolean
-  onClose: () => void
 }
 
 interface NavItem {
@@ -54,9 +52,12 @@ const bottomItems: NavItem[] = [
   { icon: '🚪', label: 'Déconnexion', href: '/auth/signout' },
 ]
 
-export default function Sidebar({ fullName, role, schoolName, isOpen, onClose }: SidebarProps) {
+export default function Sidebar({ fullName, role, schoolName }: SidebarProps) {
   const pathname = usePathname()
   const isMobile = useIsMobile()
+
+  // Sur mobile, la navigation est gérée par BottomNav
+  if (isMobile) return null
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + '/')
@@ -65,8 +66,7 @@ export default function Sidebar({ fullName, role, schoolName, isOpen, onClose }:
     display: 'flex',
     alignItems: 'center',
     gap: 9,
-    padding: isMobile ? '10px 12px' : '7px 12px',
-    minHeight: isMobile ? 44 : 'auto',
+    padding: '7px 12px',
     borderRadius: 7,
     textDecoration: 'none',
     fontSize: 12.5,
@@ -77,70 +77,22 @@ export default function Sidebar({ fullName, role, schoolName, isOpen, onClose }:
     cursor: 'pointer',
   })
 
-  const sidebarWidth = isMobile ? 280 : 220
-
   return (
-    <>
-      {/* Overlay semi-transparent sur mobile quand ouvert */}
-      {isMobile && isOpen && (
-        <div
-          onClick={onClose}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.45)',
-            zIndex: 149,
-          }}
-        />
-      )}
-
-      <aside
-        style={{
-          background: '#ffffff',
-          width: sidebarWidth,
-          minWidth: sidebarWidth,
-          borderRight: '1px solid #d1fae5',
-          position: isMobile ? 'fixed' : 'sticky',
-          top: isMobile ? 0 : 56,
-          left: 0,
-          height: isMobile ? '100vh' : 'calc(100vh - 56px)',
-          overflowY: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          flexShrink: 0,
-          zIndex: isMobile ? 150 : 'auto',
-          transform: isMobile ? (isOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none',
-          transition: 'transform 0.28s ease',
-          boxShadow: isMobile && isOpen ? '4px 0 24px rgba(0,0,0,0.15)' : 'none',
-        }}
-      >
-        {/* Bouton fermer sur mobile */}
-        {isMobile && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            padding: '10px 12px 0',
-          }}>
-            <button
-              onClick={onClose}
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 7,
-                border: 'none',
-                background: '#f3f4f6',
-                cursor: 'pointer',
-                fontSize: 14,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              ✕
-            </button>
-          </div>
-        )}
+    <aside
+      style={{
+        background: '#ffffff',
+        width: 220,
+        minWidth: 220,
+        borderRight: '1px solid #d1fae5',
+        position: 'sticky',
+        top: 56,
+        height: 'calc(100vh - 56px)',
+        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        flexShrink: 0,
+      }}
+    >
 
         {/* User card */}
         <div
@@ -239,7 +191,6 @@ export default function Sidebar({ fullName, role, schoolName, isOpen, onClose }:
                   key={item.href}
                   href={item.href}
                   style={navItemStyle(item.href)}
-                  onClick={() => { if (isMobile) onClose() }}
                 >
                   <span style={{ fontSize: 14 }}>{item.icon}</span>
                   <span>{item.label}</span>
@@ -259,7 +210,6 @@ export default function Sidebar({ fullName, role, schoolName, isOpen, onClose }:
                 ...navItemStyle(item.href),
                 ...(item.href === '/auth/signout' ? { color: '#dc2626' } : {}),
               }}
-              onClick={() => { if (isMobile) onClose() }}
             >
               <span style={{ fontSize: 14 }}>{item.icon}</span>
               <span>{item.label}</span>
@@ -267,6 +217,5 @@ export default function Sidebar({ fullName, role, schoolName, isOpen, onClose }:
           ))}
         </div>
       </aside>
-    </>
   )
 }
