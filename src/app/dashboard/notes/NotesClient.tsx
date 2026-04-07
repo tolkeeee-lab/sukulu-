@@ -275,8 +275,8 @@ export default function NotesClient({
       const json = (await res.json()) as { grade?: Grade }
       if (res.ok && json.grade) {
         setLocalGrades(prev => [...prev.filter(g => !(g.student_id === student.id && g.subject_id === subjectId && g.trimestre === selectedTrimestre)), json.grade!])
+        showToast('Note sauvegardée ✓')
       }
-      showToast('Note sauvegardée ✓')
     } catch {
       setLocalGrades(prev => {
         const f = prev.filter(g => !(g.student_id === student.id && g.subject_id === subjectId && g.trimestre === selectedTrimestre))
@@ -285,10 +285,27 @@ export default function NotesClient({
     } finally {
       setPendingSaves(prev => { const n = new Set(prev); n.delete(key); return n })
       setNoteInputs(prev => {
-        const next = { ...prev }; const sMap = { ...(next[student.id] ?? {}) }; delete sMap[subjectId]; next[student.id] = sMap; return next
+        const next = { ...prev }
+        const sMap = { ...(next[student.id] ?? {}) }
+        delete sMap[subjectId]
+        next[student.id] = sMap
+        return next
       })
     }
   }, [selectedClasseId, selectedTrimestre, gradeMap, showToast])
+
+  const saveAll = useCallback(async () => {
+    const entries = Object.entries(noteInputs)
+    if (entries.length === 0) { showToast('Aucune note en attente'); return }
+    for (const [studentId, subMap] of entries) {
+      const student = students.find(s => s.id === studentId)
+      if (!student) continue
+      for (const [subjectId, value] of Object.entries(subMap)) {
+        if (value !== '') await saveGrade(student, subjectId, value)
+      }
+    }
+    showToast('Toutes les notes ont été sauvegardées ✓')
+  }, [noteInputs, students, saveGrade, showToast])
 
   const handleSubjectCreated = useCallback((subject: Subject) => {
     setLocalSubjects(prev => [...prev, subject])
@@ -524,7 +541,7 @@ export default function NotesClient({
                 ← Retour
               </button>
             )}
-            <button onClick={() => showToast('Toutes les notes ont été sauvegardées ✓')}
+            <button onClick={saveAll}
               style={{ padding: '6px 12px', borderRadius: 7, border: '1px solid #d1fae5', background: '#fff', color: '#6b7280', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
               💾 Tout sauvegarder
             </button>
