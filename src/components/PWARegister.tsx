@@ -61,7 +61,7 @@ export default function PWARegister() {
   return (
     <div style={{
       position: 'fixed',
-      bottom: 72,  // Au-dessus de la bottom nav
+      bottom: 80,
       left: 12,
       right: 12,
       background: '#1B4332',
@@ -72,16 +72,17 @@ export default function PWARegister() {
       gap: 12,
       zIndex: 300,
       boxShadow: '0 8px 32px rgba(27,67,50,0.4)',
-      animation: 'slideUp 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
     }}>
-      {/* Icône */}
+      {/* Icône Classic */}
       <div style={{
-        width: 44, height: 44, borderRadius: 10,
-        background: '#F4A261', flexShrink: 0,
+        width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+        background: '#1B4332', border: '1px solid rgba(255,255,255,0.2)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontFamily: 'Georgia, serif', fontSize: 24, fontWeight: 700, color: '#1B4332',
       }}>
-        S
+        <svg width="36" height="36" viewBox="0 0 512 512">
+          <rect width="512" height="512" rx="96" fill="#1B4332"/>
+          <text x="256" y="348" fontFamily="Georgia,serif" fontSize="320" fontWeight="700" textAnchor="middle" fill="#ffffff">S</text>
+        </svg>
       </div>
 
       {/* Texte */}
@@ -89,7 +90,7 @@ export default function PWARegister() {
         <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginBottom: 2 }}>
           Installer Sukulu
         </div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)' }}>
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
           {isIOS
             ? 'Appuyez sur ⬆️ puis "Sur l\'écran d\'accueil"'
             : 'Accès rapide depuis votre écran d\'accueil'
@@ -102,8 +103,7 @@ export default function PWARegister() {
         <button
           onClick={() => setShowBanner(false)}
           style={{
-            background: 'rgba(255,255,255,0.15)',
-            border: 'none', borderRadius: 7,
+            background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: 7,
             color: 'rgba(255,255,255,0.7)',
             padding: '6px 10px', fontSize: 12, cursor: 'pointer',
             fontFamily: 'inherit',
@@ -115,9 +115,9 @@ export default function PWARegister() {
           <button
             onClick={handleInstall}
             style={{
-              background: '#F4A261',
+              background: '#ffffff',
               border: 'none', borderRadius: 7,
-              color: '#1B4332', fontWeight: 600,
+              color: '#1B4332', fontWeight: 700,
               padding: '6px 12px', fontSize: 12, cursor: 'pointer',
               fontFamily: 'inherit',
             }}
