@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
-import StatCard from '@/components/ui/StatCard'
-import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -15,6 +13,7 @@ type Student = { id: string; first_name: string; last_name: string; matricule: s
 interface NotesClientProps {
   schoolId: string
   schoolYear: string
+  schoolName: string
   userId: string
   userRole: string
   classes: Classe[]
@@ -26,53 +25,46 @@ interface NotesClientProps {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getMention(avg: number): string {
-  if (avg >= 16) return 'Excellent'
-  if (avg >= 14) return 'Très Bien'
-  if (avg >= 12) return 'Bien'
-  if (avg >= 10) return 'Assez Bien'
+  if (avg >= 18) return 'Excellent'
+  if (avg >= 16) return 'Très bien'
+  if (avg >= 14) return 'Bien'
+  if (avg >= 12) return 'Assez bien'
+  if (avg >= 10) return 'Passable'
   return 'Insuffisant'
 }
 
-function getMentionColor(avg: number): string {
-  if (avg >= 14) return '#1B4332'
-  if (avg >= 10) return '#d97706'
-  return '#dc2626'
+function getMentionColors(avg: number): { color: string; bg: string } {
+  if (avg >= 14) return { color: '#166534', bg: '#dcfce7' }
+  if (avg >= 10) return { color: '#d97706', bg: '#fef3c7' }
+  return { color: '#dc2626', bg: '#fee2e2' }
 }
 
-function getNoteColor(note: number, max: number = 20): string {
-  const n = (note / max) * 20
-  if (n < 10) return '#dc2626'
-  if (n < 12) return '#d97706'
-  if (n >= 14) return '#1B4332'
-  return '#374151'
+function getMentionColor(avg: number): string {
+  return getMentionColors(avg).color
+}
+
+function getNoteColor(note: number): string {
+  if (note < 10) return '#dc2626'
+  if (note < 12) return '#d97706'
+  if (note >= 14) return '#166534'
+  return '#1e40af'
 }
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
 function Toast({ message, onClose }: { message: string; onClose: () => void }) {
   return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: 28,
-        right: 28,
-        background: '#1B4332',
-        color: '#fff',
-        padding: '12px 20px',
-        borderRadius: 10,
-        fontSize: 13,
-        fontWeight: 600,
-        boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        zIndex: 9999,
-      }}
-    >
+    <div style={{
+      position: 'fixed', bottom: 24, right: 24,
+      background: '#1B4332', color: '#ffffff',
+      padding: '10px 16px', borderRadius: 8, fontSize: 12, fontWeight: 500,
+      boxShadow: '0 4px 14px rgba(27,67,50,0.3)',
+      display: 'flex', alignItems: 'center', gap: 8, zIndex: 9999,
+    }}>
       ✅ {message}
       <button
         onClick={onClose}
-        style={{ background: 'none', border: 'none', color: '#D8F3DC', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}
+        style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: 0 }}
       >
         ✕
       </button>
@@ -84,11 +76,12 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
 
 interface AddSubjectModalProps {
   classId: string
+  className: string
   onClose: () => void
   onCreated: (subject: Subject) => void
 }
 
-function AddSubjectModal({ classId, onClose, onCreated }: AddSubjectModalProps) {
+function AddSubjectModal({ classId, className, onClose, onCreated }: AddSubjectModalProps) {
   const [name, setName] = useState('')
   const [coefficient, setCoefficient] = useState(1)
   const [saving, setSaving] = useState(false)
@@ -117,18 +110,18 @@ function AddSubjectModal({ classId, onClose, onCreated }: AddSubjectModalProps) 
 
   return (
     <div
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-      }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
       onClick={onClose}
     >
       <div
-        style={{ background: '#fff', borderRadius: 14, padding: 28, minWidth: 360, boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}
+        style={{ background: '#fff', borderRadius: 13, padding: 22, minWidth: 360, boxShadow: '0 8px 40px rgba(0,0,0,0.2)', maxWidth: 420 }}
         onClick={e => e.stopPropagation()}
       >
-        <div style={{ fontFamily: 'Playfair Display, serif', fontSize: 17, fontWeight: 700, color: '#1B4332', marginBottom: 18 }}>
-          ➕ Ajouter une matière
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+          <div style={{ fontFamily: 'Playfair Display, serif', fontSize: 17, fontWeight: 700, color: '#1B4332' }}>
+            Ajouter une matière
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 16, cursor: 'pointer', color: '#6b7280', padding: 4 }}>✕</button>
         </div>
         {error && (
           <div style={{ background: '#fee2e2', color: '#dc2626', padding: '8px 12px', borderRadius: 7, marginBottom: 12, fontSize: 12 }}>
@@ -144,7 +137,7 @@ function AddSubjectModal({ classId, onClose, onCreated }: AddSubjectModalProps) 
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="ex: Mathématiques"
-              style={{ width: '100%', padding: '8px 12px', borderRadius: 7, border: '1px solid #d1d5db', fontSize: 13, boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: 7, border: '1px solid #d1d5db', fontSize: 13, boxSizing: 'border-box', fontFamily: 'Source Sans 3, sans-serif' }}
             />
           </div>
           <div>
@@ -160,9 +153,19 @@ function AddSubjectModal({ classId, onClose, onCreated }: AddSubjectModalProps) 
               style={{ width: '100%', padding: '8px 12px', borderRadius: 7, border: '1px solid #d1d5db', fontSize: 13, boxSizing: 'border-box' }}
             />
           </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>
+              Classe
+            </label>
+            <input
+              value={className}
+              disabled
+              style={{ width: '100%', padding: '8px 12px', borderRadius: 7, border: '1px solid #e5e7eb', fontSize: 13, boxSizing: 'border-box', background: '#f9fafb', color: '#6b7280' }}
+            />
+          </div>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
             <Button variant="outline" type="button" onClick={onClose}>Annuler</Button>
-            <Button type="submit" disabled={saving}>{saving ? 'Création...' : 'Créer'}</Button>
+            <Button type="submit" disabled={saving}>{saving ? 'Création...' : 'Créer la matière'}</Button>
           </div>
         </form>
       </div>
@@ -174,6 +177,7 @@ function AddSubjectModal({ classId, onClose, onCreated }: AddSubjectModalProps) 
 
 export default function NotesClient({
   schoolYear,
+  schoolName,
   classes,
   subjects: initialSubjects,
   grades: initialGrades,
@@ -384,27 +388,35 @@ export default function NotesClient({
       }
     }
 
-    return { rows, avg, rank, total: classeStudents.length, classeAvgBySubject }
+    // Moy classe globale pour ce trimestre
+    const classeGrades = localGrades.filter(g => g.class_id === selectedClasseId && g.trimestre === trimestre)
+    const classeAvg = classeGrades.length > 0
+      ? Math.round((classeGrades.reduce((a, g) => a + (g.grade / g.max_grade) * 20, 0) / classeGrades.length) * 10) / 10
+      : 0
+
+    return { rows, avg, rank, total: classeStudents.length, classeAvgBySubject, classeAvg }
   }
 
   // ── Render: Saisie tab ──
 
   function renderSaisie() {
-    const subject = localSubjects.find(s => s.id === selectedSubjectId)
+    const thStyle: React.CSSProperties = {
+      padding: '6px 8px', fontSize: 9, fontWeight: 700, color: '#6b7280',
+      textTransform: 'uppercase', letterSpacing: '0.04em',
+      textAlign: 'center' as const, borderBottom: '2px solid #d1fae5', whiteSpace: 'nowrap',
+    }
 
     return (
       <div>
         {/* Toolbar */}
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 18 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
           <select
             value={selectedClasseId}
             onChange={e => { setSelectedClasseId(e.target.value); setSelectedSubjectId('') }}
-            style={{ padding: '7px 12px', borderRadius: 7, border: '1px solid #d1d5db', fontSize: 12.5, background: '#fff', cursor: 'pointer' }}
+            style={{ padding: '7px 10px', border: '1px solid #d1fae5', borderRadius: 7, fontSize: 12, background: '#ffffff', fontFamily: 'Source Sans 3, sans-serif', cursor: 'pointer' }}
           >
             {classes.length === 0 && <option value="">Aucune classe</option>}
-            {classes.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
+            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
 
           <div style={{ display: 'flex', gap: 4 }}>
@@ -413,13 +425,13 @@ export default function NotesClient({
                 key={t}
                 onClick={() => setSelectedTrimestre(t)}
                 style={{
-                  padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                  background: selectedTrimestre === t ? '#1B4332' : '#f3f4f6',
-                  color: selectedTrimestre === t ? '#fff' : '#374151',
-                  border: `1px solid ${selectedTrimestre === t ? '#1B4332' : '#d1d5db'}`,
+                  padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer',
+                  border: `1.5px solid ${selectedTrimestre === t ? '#1B4332' : '#d1fae5'}`,
+                  background: selectedTrimestre === t ? '#1B4332' : '#ffffff',
+                  color: selectedTrimestre === t ? '#ffffff' : '#6b7280',
                 }}
               >
-                {t === 1 ? '1er' : `${t}e`}
+                {t === 1 ? '1er' : `${t}e`} trim.
               </button>
             ))}
           </div>
@@ -427,22 +439,26 @@ export default function NotesClient({
           <select
             value={selectedSubjectId}
             onChange={e => setSelectedSubjectId(e.target.value)}
-            style={{ padding: '7px 12px', borderRadius: 7, border: '1px solid #d1d5db', fontSize: 12.5, background: '#fff', cursor: 'pointer', minWidth: 160 }}
+            style={{ padding: '7px 10px', border: '1px solid #d1fae5', borderRadius: 7, fontSize: 12, background: '#ffffff', cursor: 'pointer', minWidth: 180 }}
           >
             <option value="">— Choisir une matière —</option>
-            {classeSubjects.map(s => (
-              <option key={s.id} value={s.id}>{s.name} (coef {s.coefficient})</option>
-            ))}
+            {classeSubjects.map(s => <option key={s.id} value={s.id}>{s.name} (coef {s.coefficient})</option>)}
           </select>
 
-          <Button variant="outline" onClick={() => setShowAddSubject(true)} style={{ fontSize: 12 }}>
-            ➕ Matière
-          </Button>
+          <button
+            onClick={() => setShowAddSubject(true)}
+            style={{ background: '#fff4ec', border: '1px solid #fed7aa', color: '#9a3412', padding: '7px 13px', borderRadius: 7, fontSize: 12, cursor: 'pointer', fontWeight: 500 }}
+          >
+            + Matière
+          </button>
 
           {selectedSubjectId && (
-            <Button onClick={saveAll} style={{ marginLeft: 'auto', fontSize: 12 }}>
+            <button
+              onClick={saveAll}
+              style={{ background: '#1B4332', color: '#ffffff', padding: '7px 13px', borderRadius: 7, fontSize: 12, cursor: 'pointer', fontWeight: 500, marginLeft: 'auto' }}
+            >
               💾 Tout sauvegarder
-            </Button>
+            </button>
           )}
         </div>
 
@@ -456,15 +472,15 @@ export default function NotesClient({
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, minWidth: 700 }}>
               <thead>
-                <tr style={{ background: '#f0faf3', borderBottom: '2px solid #D8F3DC' }}>
-                  <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#1B4332', width: 50 }}>Rang</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#1B4332' }}>Élève</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#1B4332' }}>Matricule</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#1B4332', width: 120 }}>Note /20</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#1B4332' }}>Commentaire</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#1B4332', width: 110 }}>Statut</th>
+                <tr style={{ background: '#f3f4f6' }}>
+                  <th style={{ ...thStyle, textAlign: 'left' }}>Rang</th>
+                  <th style={{ ...thStyle, textAlign: 'left' }}>Élève</th>
+                  <th style={{ ...thStyle, textAlign: 'left' }}>Matricule</th>
+                  <th style={thStyle}>Note /20</th>
+                  <th style={thStyle}>Commentaire</th>
+                  <th style={thStyle}>Statut</th>
                 </tr>
               </thead>
               <tbody>
@@ -474,19 +490,22 @@ export default function NotesClient({
                   const noteVal = buf?.note ?? (existing ? String(existing.grade) : '')
                   const commentVal = buf?.comment ?? (existing?.comment ?? '')
                   const isSaving = pendingSaves[student.id] ?? false
+                  const noteNum = noteVal ? parseFloat(noteVal) : null
+                  const noteColor = noteNum !== null ? getNoteColor(noteNum) : '#374151'
 
                   return (
-                    <tr key={student.id} style={{ borderBottom: '1px solid #f0faf3', background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
-                      <td style={{ padding: '8px 12px', color: '#6b7280', fontFamily: 'JetBrains Mono, monospace' }}>
-                        {idx + 1}
-                      </td>
-                      <td style={{ padding: '8px 12px', fontWeight: 600, color: '#111827' }}>
+                    <tr
+                      key={student.id}
+                      style={{ borderBottom: '1px solid #f0f0f0' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = '#f0faf3' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = '' }}
+                    >
+                      <td style={{ padding: '7px 8px', textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: '#6b7280' }}>{idx + 1}</td>
+                      <td style={{ padding: '7px 8px', fontWeight: 600, color: '#1B4332' }}>
                         {student.last_name} {student.first_name}
                       </td>
-                      <td style={{ padding: '8px 12px', color: '#6b7280', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>
-                        {student.matricule}
-                      </td>
-                      <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                      <td style={{ padding: '7px 8px', color: '#6b7280', fontFamily: 'JetBrains Mono, monospace', fontSize: 10 }}>{student.matricule}</td>
+                      <td style={{ padding: '7px 8px', textAlign: 'center' }}>
                         <input
                           type="number"
                           min={0}
@@ -499,19 +518,15 @@ export default function NotesClient({
                           }}
                           onBlur={() => handleBlur(student)}
                           style={{
-                            width: 70,
-                            padding: '5px 8px',
-                            borderRadius: 6,
-                            border: '1px solid #d1d5db',
-                            fontSize: 13,
-                            fontFamily: 'JetBrains Mono, monospace',
-                            textAlign: 'center',
-                            color: noteVal ? getNoteColor(parseFloat(noteVal)) : '#374151',
-                            fontWeight: 700,
+                            width: 60, padding: '3px 6px', borderRadius: 5, textAlign: 'center',
+                            border: `1.5px solid ${noteNum !== null && noteNum < 10 ? '#fca5a5' : '#d1fae5'}`,
+                            fontFamily: 'JetBrains Mono, monospace', fontSize: 13, fontWeight: 600,
+                            color: noteColor, background: existing ? '#f0faf3' : '#fff',
+                            outline: 'none',
                           }}
                         />
                       </td>
-                      <td style={{ padding: '8px 12px' }}>
+                      <td style={{ padding: '7px 8px' }}>
                         <input
                           type="text"
                           value={commentVal}
@@ -520,17 +535,17 @@ export default function NotesClient({
                             setInputBuffer(p => ({ ...p, [student.id]: { note: p[student.id]?.note ?? noteVal, comment: v } }))
                           }}
                           onBlur={() => handleBlur(student)}
-                          placeholder="Commentaire optionnel"
-                          style={{ width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 12, boxSizing: 'border-box' }}
+                          placeholder="Commentaire..."
+                          style={{ width: '100%', padding: '3px 8px', border: '1px solid #e5e7eb', borderRadius: 5, fontSize: 11, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
                         />
                       </td>
-                      <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                      <td style={{ padding: '7px 8px', textAlign: 'center' }}>
                         {isSaving ? (
-                          <Badge variant="bleu">💾 En cours...</Badge>
+                          <span style={{ background: '#dbeafe', color: '#1e40af', fontSize: 10, fontWeight: 500, padding: '2px 8px', borderRadius: 999 }}>💾 En cours...</span>
                         ) : existing ? (
-                          <Badge variant="vert">✅ Enregistré</Badge>
+                          <span style={{ background: '#D8F3DC', color: '#1B4332', fontSize: 10, fontWeight: 500, padding: '2px 8px', borderRadius: 999 }}>✅ Enregistré</span>
                         ) : (
-                          <Badge variant="jaune">⏳ Non saisi</Badge>
+                          <span style={{ background: '#fef3c7', color: '#d97706', fontSize: 10, fontWeight: 500, padding: '2px 8px', borderRadius: 999 }}>⏳ Non saisi</span>
                         )}
                       </td>
                     </tr>
@@ -539,24 +554,20 @@ export default function NotesClient({
               </tbody>
               <tfoot>
                 <tr style={{ background: '#f0faf3', borderTop: '2px solid #D8F3DC' }}>
-                  <td colSpan={3} style={{ padding: '10px 12px', fontWeight: 700, color: '#1B4332', fontSize: 12 }}>
-                    Résumé — {subject?.name}
+                  <td colSpan={3} style={{ padding: '8px 10px', fontWeight: 700, color: '#1B4332', fontSize: 12 }}>
+                    Moyenne de la classe
                   </td>
-                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                  <td style={{ padding: '8px', textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: '#1B4332', fontSize: 14 }}>
                     {(() => {
                       const subGrades = classeStudents
                         .map(s => gradeMap.get(`${s.id}|${selectedSubjectId}|${selectedTrimestre}`))
                         .filter(Boolean) as Grade[]
-                      if (subGrades.length === 0) return <span style={{ color: '#6b7280', fontSize: 11 }}>—</span>
+                      if (subGrades.length === 0) return '—'
                       const avg = subGrades.reduce((a, g) => a + (g.grade / g.max_grade) * 20, 0) / subGrades.length
-                      return (
-                        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: getNoteColor(avg) }}>
-                          {avg.toFixed(1)}/20
-                        </span>
-                      )
+                      return `${avg.toFixed(1)}/20`
                     })()}
                   </td>
-                  <td colSpan={2} style={{ padding: '10px 12px', color: '#6b7280', fontSize: 11 }}>
+                  <td colSpan={2} style={{ padding: '8px', textAlign: 'right', fontSize: 11, color: '#6b7280' }}>
                     {trimestreGradesForClass.filter(g => g.subject_id === selectedSubjectId).length}/{classeStudents.length} élèves notés
                   </td>
                 </tr>
@@ -572,7 +583,9 @@ export default function NotesClient({
 
   function renderBulletins() {
     const bulletinStudents = students.filter(s => s.class_id === selectedClasseId)
-    const currentStudent = bulletinStudents.find(s => s.id === selectedStudentId) ?? bulletinStudents[0]
+    const activeStudentId: string = selectedStudentId || bulletinStudents[0]?.id || ''
+    const activeStudent = bulletinStudents.find(s => s.id === activeStudentId)
+    const selectedClasse = classes.find(c => c.id === selectedClasseId)
 
     if (bulletinStudents.length === 0) {
       return (
@@ -582,145 +595,264 @@ export default function NotesClient({
       )
     }
 
-    const activeStudent = currentStudent ?? bulletinStudents[0]
-    const { rows, avg, rank, total, classeAvgBySubject } = getBulletinData(activeStudent.id, selectedTrimestre)
+    const { rows, avg: moyenneEleve, rank, classeAvgBySubject, classeAvg: moyenneClasse } = getBulletinData(activeStudentId, selectedTrimestre)
+    const mention = getMention(moyenneEleve)
+    const { color: mentionColor, bg: mentionBg } = getMentionColors(moyenneEleve)
+    const initials = activeStudent ? (activeStudent.first_name[0] + activeStudent.last_name[0]).toUpperCase() : ''
 
-    function getApprec(g: Grade | null): string {
-      if (!g) return '—'
-      const n = (g.grade / g.max_grade) * 20
-      return getMention(n)
+    const getAppreciation = (noteVal: number | null): string => {
+      if (noteVal === null) return '—'
+      if (noteVal >= 18) return 'Excellent'
+      if (noteVal >= 16) return 'Très bien'
+      if (noteVal >= 14) return 'Bien'
+      if (noteVal >= 12) return 'Assez bien'
+      if (noteVal >= 10) return 'Passable'
+      return 'Insuffisant'
     }
 
+    const generalAppreciation =
+      mention === 'Excellent' ? 'Résultats remarquables. Continuez ainsi !' :
+      mention === 'Très bien' ? 'Excellent travail. Félicitations !' :
+      mention === 'Bien' ? 'Bons résultats. Encouragé à continuer.' :
+      mention === 'Assez bien' ? 'Des efforts notables. Peut faire mieux.' :
+      mention === 'Passable' ? 'Résultats moyens. Des progrès sont attendus.' :
+      'Résultats insuffisants. Un travail plus sérieux est nécessaire.'
+
+    const activeIdx = bulletinStudents.findIndex(s => s.id === activeStudentId)
+
     return (
-      <div style={{ display: 'flex', gap: 20 }}>
-        {/* Sidebar élèves */}
-        <div style={{ width: 180, flexShrink: 0, background: '#f9fafb', borderRadius: 10, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-          <div style={{ padding: '10px 12px', fontWeight: 700, fontSize: 11.5, color: '#1B4332', background: '#f0faf3', borderBottom: '1px solid #D8F3DC' }}>
-            ÉLÈVES ({bulletinStudents.length})
-          </div>
-          <div style={{ maxHeight: 480, overflowY: 'auto' }}>
-            {bulletinStudents.map(s => (
+      <div>
+        {/* Toolbar */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center' }}>
+          <select
+            value={selectedClasseId}
+            onChange={e => { setSelectedClasseId(e.target.value); setSelectedStudentId('') }}
+            style={{ padding: '7px 10px', border: '1px solid #d1fae5', borderRadius: 7, fontSize: 12, background: '#ffffff', cursor: 'pointer' }}
+          >
+            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {([1, 2, 3] as const).map(t => (
               <button
-                key={s.id}
-                onClick={() => setSelectedStudentId(s.id)}
+                key={t}
+                onClick={() => setSelectedTrimestre(t)}
                 style={{
-                  width: '100%', textAlign: 'left', padding: '8px 12px', border: 'none', cursor: 'pointer', fontSize: 11.5,
-                  background: (selectedStudentId === s.id || (!selectedStudentId && s.id === bulletinStudents[0]?.id)) ? '#D8F3DC' : 'transparent',
-                  color: '#111827', fontWeight: (selectedStudentId === s.id || (!selectedStudentId && s.id === bulletinStudents[0]?.id)) ? 700 : 400,
-                  borderBottom: '1px solid #f3f4f6',
+                  padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer',
+                  border: `1.5px solid ${selectedTrimestre === t ? '#1B4332' : '#d1fae5'}`,
+                  background: selectedTrimestre === t ? '#1B4332' : '#ffffff',
+                  color: selectedTrimestre === t ? '#ffffff' : '#6b7280',
                 }}
               >
-                {s.last_name} {s.first_name}
+                {t === 1 ? '1er' : `${t}e`} trim.
               </button>
             ))}
           </div>
         </div>
 
-        {/* Bulletin */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Toolbar */}
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
-            <select
-              value={selectedClasseId}
-              onChange={e => { setSelectedClasseId(e.target.value); setSelectedStudentId('') }}
-              style={{ padding: '7px 12px', borderRadius: 7, border: '1px solid #d1d5db', fontSize: 12.5, background: '#fff', cursor: 'pointer' }}
-            >
-              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {([1, 2, 3] as const).map(t => (
-                <button
-                  key={t}
-                  onClick={() => setSelectedTrimestre(t)}
+        <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 16 }}>
+          {/* Liste élèves */}
+          <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 11, overflow: 'hidden' }}>
+            <div style={{ padding: '10px 14px', borderBottom: '1px solid #d1fae5', fontWeight: 600, fontSize: 12, color: '#1B4332' }}>
+              Élèves ({bulletinStudents.length})
+            </div>
+            <div style={{ overflowY: 'auto', maxHeight: 600 }}>
+              {bulletinStudents.map((s, i) => (
+                <div
+                  key={s.id}
+                  onClick={() => setSelectedStudentId(s.id)}
                   style={{
-                    padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                    background: selectedTrimestre === t ? '#1B4332' : '#f3f4f6',
-                    color: selectedTrimestre === t ? '#fff' : '#374151',
-                    border: `1px solid ${selectedTrimestre === t ? '#1B4332' : '#d1d5db'}`,
+                    padding: '9px 14px', cursor: 'pointer', borderBottom: '1px solid #f0f0f0',
+                    background: activeStudentId === s.id ? '#f0faf3' : '#ffffff',
+                    borderLeft: `3px solid ${activeStudentId === s.id ? '#1B4332' : 'transparent'}`,
+                    display: 'flex', alignItems: 'center', gap: 8,
                   }}
                 >
-                  {t === 1 ? '1er' : `${t}e`}
-                </button>
+                  <div style={{ width: 28, height: 28, background: '#1B4332', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#ffffff', flexShrink: 0 }}>
+                    {(s.first_name[0] + s.last_name[0]).toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: '#1B4332' }}>{s.last_name} {s.first_name}</div>
+                    <div style={{ fontSize: 10, color: '#6b7280' }}>Rang {i + 1}</div>
+                  </div>
+                </div>
               ))}
             </div>
-            <Button variant="outline" onClick={() => window.print()} style={{ marginLeft: 'auto', fontSize: 12 }}>
-              🖨️ Imprimer
-            </Button>
           </div>
 
-          {/* Bulletin card */}
-          <div style={{ background: '#fff', border: '1px solid #d1fae5', borderRadius: 12, overflow: 'hidden' }}>
-            {/* Header */}
-            <div style={{ background: '#1B4332', color: '#fff', padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <div style={{ fontFamily: 'Playfair Display, serif', fontSize: 15, fontWeight: 700 }}>BULLETIN SCOLAIRE</div>
-                <div style={{ fontSize: 12, opacity: 0.8, marginTop: 2 }}>
-                  Trimestre {selectedTrimestre} · Année {schoolYear}
+          {/* Document bulletin */}
+          {activeStudent && (
+            <div style={{ background: '#ffffff', borderRadius: 8, overflow: 'hidden', boxShadow: '0 4px 24px rgba(27,67,50,0.12)' }}>
+              {/* Header vert foncé */}
+              <div style={{ background: '#1B4332', padding: '24px 32px 20px', position: 'relative', overflow: 'hidden' }}>
+                {/* Watermark S */}
+                <div style={{
+                  position: 'absolute', right: -20, top: -20,
+                  fontFamily: 'Playfair Display, serif', fontSize: 160,
+                  color: 'rgba(255,255,255,0.04)', fontWeight: 700, lineHeight: 1,
+                  pointerEvents: 'none', userSelect: 'none',
+                }}>S</div>
+
+                {/* Top row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{
+                      width: 52, height: 52, background: '#F4A261', borderRadius: 12,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontFamily: 'Playfair Display, serif', fontSize: 26, fontWeight: 700, color: '#1B4332', flexShrink: 0,
+                    }}>S</div>
+                    <div>
+                      <div style={{ fontFamily: 'Playfair Display, serif', fontSize: 20, fontWeight: 600, color: '#ffffff', lineHeight: 1.2 }}>
+                        {schoolName}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        Établissement scolaire
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ background: '#F4A261', color: '#1B4332', fontSize: 10, fontWeight: 600, padding: '5px 14px', borderRadius: 3, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Bulletin scolaire
+                  </div>
+                </div>
+
+                {/* Meta grid 4 cellules */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 1, background: 'rgba(255,255,255,0.08)', borderRadius: 6, overflow: 'hidden' }}>
+                  {[
+                    { label: 'Année scolaire', val: schoolYear },
+                    { label: 'Classe', val: selectedClasse?.name ?? '—' },
+                    { label: 'Trimestre', val: `${selectedTrimestre === 1 ? '1er' : `${selectedTrimestre}e`} trimestre` },
+                    { label: "Date d'édition", val: new Date().toLocaleDateString('fr-FR') },
+                  ].map(({ label, val }) => (
+                    <div key={label} style={{ background: 'rgba(255,255,255,0.05)', padding: '8px 14px' }}>
+                      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{label}</div>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: '#ffffff' }}>{val}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div style={{ textAlign: 'right', fontSize: 12 }}>
-                <div style={{ fontWeight: 700 }}>{activeStudent.last_name} {activeStudent.first_name}</div>
-                <div style={{ opacity: 0.8 }}>Matricule : {activeStudent.matricule}</div>
+
+              {/* Bloc élève */}
+              <div style={{ background: '#f0faf3', borderBottom: '1px solid #d1fae5', padding: '16px 32px', display: 'flex', alignItems: 'center', gap: 24 }}>
+                <div style={{ width: 50, height: 50, background: '#1B4332', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Playfair Display, serif', fontSize: 20, color: '#ffffff', flexShrink: 0 }}>
+                  {initials}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: 'Playfair Display, serif', fontSize: 18, fontWeight: 600, color: '#1B4332' }}>
+                    {activeStudent.last_name.toUpperCase()} {activeStudent.first_name}
+                  </div>
+                  <div style={{ display: 'flex', gap: 20, marginTop: 3, fontSize: 11, color: '#6b7280' }}>
+                    <span>Matricule : <strong style={{ color: '#0d1f16' }}>{activeStudent.matricule}</strong></span>
+                    <span>Classe : <strong style={{ color: '#0d1f16' }}>{selectedClasse?.name}</strong></span>
+                    <span>Année : <strong style={{ color: '#0d1f16' }}>{schoolYear}</strong></span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <div style={{ background: '#1B4332', border: '1px solid #1B4332', borderRadius: 6, padding: '8px 14px', textAlign: 'center', minWidth: 72 }}>
+                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 20, fontWeight: 500, lineHeight: 1, marginBottom: 3, color: '#F4A261' }}>{moyenneEleve}/20</div>
+                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Moyenne</div>
+                  </div>
+                  <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 6, padding: '8px 14px', textAlign: 'center', minWidth: 72 }}>
+                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 20, fontWeight: 500, lineHeight: 1, marginBottom: 3, color: '#1B4332' }}>{rank}e</div>
+                    <div style={{ fontSize: 9, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rang</div>
+                  </div>
+                  <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 6, padding: '8px 14px', textAlign: 'center', minWidth: 72 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: mentionColor, marginBottom: 3 }}>{mention}</div>
+                    <div style={{ fontSize: 9, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mention</div>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div style={{ padding: '14px 24px 6px', display: 'flex', gap: 20, fontSize: 12, color: '#374151', borderBottom: '1px solid #f0faf3' }}>
-              <span>Classe : <strong>{classes.find(c => c.id === selectedClasseId)?.name ?? '—'}</strong></span>
-              <span>Rang : <strong style={{ fontFamily: 'JetBrains Mono, monospace' }}>{rank}/{total}</strong></span>
-            </div>
+              {/* Contenu bulletin */}
+              <div style={{ padding: '0 32px 32px' }}>
+                {/* En-tête colonnes */}
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '1fr 60px 70px 70px 100px',
+                  gap: 6, padding: '6px 32px 4px',
+                  background: '#D8F3DC', margin: '0 -32px',
+                  fontSize: 9, fontWeight: 600, color: '#1B4332',
+                  textTransform: 'uppercase', letterSpacing: '0.05em',
+                }}>
+                  <span>Matière</span>
+                  <span style={{ textAlign: 'center' }}>Coef</span>
+                  <span style={{ textAlign: 'center' }}>Note</span>
+                  <span style={{ textAlign: 'center' }}>Moy. classe</span>
+                  <span style={{ textAlign: 'center' }}>Appréciation</span>
+                </div>
 
-            {/* Table */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
-              <thead>
-                <tr style={{ background: '#f0faf3', borderBottom: '2px solid #D8F3DC' }}>
-                  <th style={{ padding: '9px 16px', textAlign: 'left', fontWeight: 700, color: '#1B4332' }}>Matière</th>
-                  <th style={{ padding: '9px 12px', textAlign: 'center', fontWeight: 700, color: '#1B4332', width: 60 }}>Coef</th>
-                  <th style={{ padding: '9px 12px', textAlign: 'center', fontWeight: 700, color: '#1B4332', width: 80 }}>Note</th>
-                  <th style={{ padding: '9px 12px', textAlign: 'center', fontWeight: 700, color: '#1B4332', width: 80 }}>Moy. classe</th>
-                  <th style={{ padding: '9px 16px', textAlign: 'left', fontWeight: 700, color: '#1B4332' }}>Appréciation</th>
-                </tr>
-              </thead>
-              <tbody>
+                {/* Lignes matières */}
                 {rows.map(({ subject, grade }) => {
-                  const note20 = grade ? (grade.grade / grade.max_grade) * 20 : null
-                  const classeAvg = classeAvgBySubject.get(subject.id)
+                  const noteVal = grade ? (grade.grade / grade.max_grade) * 20 : null
+                  const classMoy = classeAvgBySubject.get(subject.id) ?? null
+                  const noteColor = noteVal === null ? '#9ca3af' : getNoteColor(noteVal)
+                  const noteBg = noteVal === null ? '#f3f4f6' : noteVal < 10 ? '#fee2e2' : noteVal < 12 ? '#fef3c7' : '#dcfce7'
+                  const appreciation = getAppreciation(noteVal)
+
                   return (
-                    <tr key={subject.id} style={{ borderBottom: '1px solid #f0faf3' }}>
-                      <td style={{ padding: '8px 16px', color: '#111827', fontWeight: 500 }}>{subject.name}</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#6b7280', fontFamily: 'JetBrains Mono, monospace' }}>{subject.coefficient}</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'center' }}>
-                        {note20 !== null ? (
-                          <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: getNoteColor(note20) }}>
-                            {note20 % 1 === 0 ? note20 : note20.toFixed(1)}
-                          </span>
-                        ) : <span style={{ color: '#d1d5db' }}>—</span>}
-                      </td>
-                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#6b7280', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>
-                        {classeAvg !== undefined ? classeAvg.toFixed(1) : '—'}
-                      </td>
-                      <td style={{ padding: '8px 16px', color: '#374151', fontSize: 11.5 }}>{getApprec(grade)}</td>
-                    </tr>
+                    <div key={subject.id} style={{ display: 'grid', gridTemplateColumns: '1fr 60px 70px 70px 100px', gap: 6, padding: '9px 0', borderBottom: '1px solid #f3f4f6', alignItems: 'center' }}>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: '#0d1f16' }}>{subject.name}</div>
+                      <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 500, color: '#6b7280' }}>{subject.coefficient}</div>
+                      <div style={{ textAlign: 'center' }}>
+                        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 14, fontWeight: 500, padding: '3px 8px', borderRadius: 4, background: noteBg, color: noteColor }}>
+                          {noteVal !== null ? `${noteVal % 1 === 0 ? noteVal : noteVal.toFixed(1)}/20` : 'NC'}
+                        </span>
+                      </div>
+                      <div style={{ textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#6b7280' }}>
+                        {classMoy !== null ? `${classMoy.toFixed(1)}/20` : '—'}
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <span style={{ fontSize: 11, fontStyle: 'italic', color: noteColor }}>{appreciation}</span>
+                      </div>
+                    </div>
                   )
                 })}
-              </tbody>
-              <tfoot>
-                <tr style={{ background: '#f0faf3', borderTop: '2px solid #D8F3DC' }}>
-                  <td colSpan={2} style={{ padding: '12px 16px', fontWeight: 700, color: '#1B4332' }}>Moyenne générale</td>
-                  <td style={{ padding: '12px 12px', textAlign: 'center' }}>
-                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 16, fontWeight: 700, color: getMentionColor(avg) }}>
-                      {avg.toFixed(1)}/20
-                    </span>
-                  </td>
-                  <td />
-                  <td style={{ padding: '12px 16px' }}>
-                    <Badge variant={avg >= 14 ? 'vert' : avg >= 10 ? 'jaune' : 'rouge'}>
-                      {getMention(avg)}
-                    </Badge>
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+
+                {/* Ligne moyenne générale */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 70px 70px 100px', gap: 6, padding: '12px 32px', borderTop: '2px solid #D8F3DC', alignItems: 'center', background: '#f0faf3', margin: '0 -32px' }}>
+                  <div style={{ fontWeight: 700, color: '#1B4332', fontSize: 13 }}>Moyenne générale</div>
+                  <div style={{ textAlign: 'center', fontSize: 11, color: '#6b7280' }}>—</div>
+                  <div style={{ textAlign: 'center' }}>
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 18, fontWeight: 700, color: '#F4A261' }}>{moyenneEleve}/20</span>
+                  </div>
+                  <div style={{ textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#6b7280' }}>
+                    {moyenneClasse > 0 ? `${moyenneClasse}/20` : '—'}
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, padding: '3px 10px', borderRadius: 5, background: mentionBg, color: mentionColor }}>{mention}</span>
+                  </div>
+                </div>
+
+                {/* Appréciation générale */}
+                <div style={{ background: '#f0faf3', borderLeft: '4px solid #F4A261', borderRadius: 4, padding: '14px 16px', marginTop: 16 }}>
+                  <div style={{ fontSize: 9, fontWeight: 600, color: '#F4A261', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+                    Appréciation générale
+                  </div>
+                  <div style={{ fontSize: 13, color: '#374151', fontStyle: 'italic' }}>
+                    {generalAppreciation}
+                  </div>
+                </div>
+              </div>
+
+              {/* Boutons navigation */}
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', paddingBottom: 16, flexWrap: 'wrap' }}>
+                <Button
+                  variant="outline"
+                  disabled={activeIdx <= 0}
+                  onClick={() => activeIdx > 0 && setSelectedStudentId(bulletinStudents[activeIdx - 1].id)}
+                >
+                  ⬅️ Précédent
+                </Button>
+                <Button variant="primary" onClick={() => window.print()}>
+                  🖨️ Imprimer ce bulletin
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={activeIdx >= bulletinStudents.length - 1}
+                  onClick={() => activeIdx < bulletinStudents.length - 1 && setSelectedStudentId(bulletinStudents[activeIdx + 1].id)}
+                >
+                  Suivant ➡️
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -729,7 +861,7 @@ export default function NotesClient({
   // ── Render: Stats tab ──
 
   function renderStats() {
-    const tranche = [
+    const tranches = [
       { label: '0–5', min: 0, max: 5, color: '#dc2626' },
       { label: '5–10', min: 5, max: 10, color: '#f97316' },
       { label: '10–12', min: 10, max: 12, color: '#d97706' },
@@ -738,29 +870,24 @@ export default function NotesClient({
       { label: '16–20', min: 16, max: 20, color: '#1B4332' },
     ]
 
-    // Classement des classes par moyenne
     const classeRankings = classes.map(cls => {
       const clsGrades = localGrades.filter(g => g.class_id === cls.id && g.trimestre === selectedTrimestre)
       const avg = clsGrades.length > 0
         ? clsGrades.reduce((a, g) => a + (g.grade / g.max_grade) * 20, 0) / clsGrades.length
         : 0
-      return { classe: cls, avg: Math.round(avg * 10) / 10, count: clsGrades.length }
-    }).sort((a, b) => b.avg - a.avg)
+      return { id: cls.id, name: cls.name, moy: Math.round(avg * 10) / 10 }
+    }).sort((a, b) => b.moy - a.moy)
 
-    const maxAvg = Math.max(...classeRankings.map(r => r.avg), 1)
-
-    // Distribution pour la classe sélectionnée
     const clsGradesTri = localGrades.filter(g => g.class_id === selectedClasseId && g.trimestre === selectedTrimestre)
-    const distribution = tranche.map(t => ({
+    const distribution = tranches.map(t => ({
       ...t,
       count: clsGradesTri.filter(g => {
         const n = (g.grade / g.max_grade) * 20
         return n >= t.min && (t.max === 20 ? n <= t.max : n < t.max)
       }).length,
     }))
-    const maxDist = Math.max(...distribution.map(d => d.count), 1)
+    const maxCount = Math.max(...distribution.map(d => d.count), 1)
 
-    // Stats par matière
     const subjectStats = classeSubjects.map(sub => {
       const subGrades = clsGradesTri.filter(g => g.subject_id === sub.id)
       const notes = subGrades.map(g => (g.grade / g.max_grade) * 20)
@@ -774,28 +901,27 @@ export default function NotesClient({
       }
     })
 
-    // Évolution par trimestre
-    const trimestres = [1, 2, 3] as const
-    const schoolGrades = localGrades
-    const classeTrends = trimestres.map(t => {
+    const classeTrends = ([1, 2, 3] as const).map((t, i) => {
       const clsG = localGrades.filter(g => g.class_id === selectedClasseId && g.trimestre === t)
-      const schoolG = schoolGrades.filter(g => g.trimestre === t)
-      const clsAvg = clsG.length > 0 ? clsG.reduce((a, g) => a + (g.grade / g.max_grade) * 20, 0) / clsG.length : null
-      const schoolAvg = schoolG.length > 0 ? schoolG.reduce((a, g) => a + (g.grade / g.max_grade) * 20, 0) / schoolG.length : null
-      return {
-        t,
-        clsAvg: clsAvg !== null ? Math.round(clsAvg * 10) / 10 : null,
-        schoolAvg: schoolAvg !== null ? Math.round(schoolAvg * 10) / 10 : null,
-      }
+      const schoolG = localGrades.filter(g => g.trimestre === t)
+      const clsAvg = clsG.length > 0 ? Math.round((clsG.reduce((a, g) => a + (g.grade / g.max_grade) * 20, 0) / clsG.length) * 10) / 10 : null
+      const schoolAvg = schoolG.length > 0 ? Math.round((schoolG.reduce((a, g) => a + (g.grade / g.max_grade) * 20, 0) / schoolG.length) * 10) / 10 : null
+      return { t, clsAvg, schoolAvg, idx: i }
     })
+
+    const thStat: React.CSSProperties = {
+      padding: '7px 8px', textAlign: 'center' as const, fontWeight: 600, color: '#1B4332',
+      fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.04em',
+    }
 
     return (
       <div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 18, flexWrap: 'wrap' }}>
+        {/* Toolbar */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center' }}>
           <select
             value={selectedClasseId}
             onChange={e => setSelectedClasseId(e.target.value)}
-            style={{ padding: '7px 12px', borderRadius: 7, border: '1px solid #d1d5db', fontSize: 12.5, background: '#fff', cursor: 'pointer' }}
+            style={{ padding: '7px 10px', border: '1px solid #d1fae5', borderRadius: 7, fontSize: 12, background: '#ffffff', cursor: 'pointer' }}
           >
             {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
@@ -805,119 +931,109 @@ export default function NotesClient({
                 key={t}
                 onClick={() => setSelectedTrimestre(t)}
                 style={{
-                  padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                  background: selectedTrimestre === t ? '#1B4332' : '#f3f4f6',
-                  color: selectedTrimestre === t ? '#fff' : '#374151',
-                  border: `1px solid ${selectedTrimestre === t ? '#1B4332' : '#d1d5db'}`,
+                  padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 500, cursor: 'pointer',
+                  border: `1.5px solid ${selectedTrimestre === t ? '#1B4332' : '#d1fae5'}`,
+                  background: selectedTrimestre === t ? '#1B4332' : '#ffffff',
+                  color: selectedTrimestre === t ? '#ffffff' : '#6b7280',
                 }}
               >
-                {t === 1 ? '1er' : `${t}e`}
+                {t === 1 ? '1er' : `${t}e`} trim.
               </button>
             ))}
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           {/* Colonne gauche */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {/* Classement classes */}
-            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #d1fae5', padding: 20 }}>
-              <div style={{ fontWeight: 700, fontSize: 13, color: '#1B4332', marginBottom: 14 }}>
-                🏆 Classement des classes — Trimestre {selectedTrimestre}
+            <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 11, overflow: 'hidden' }}>
+              <div style={{ padding: '11px 15px', borderBottom: '1px solid #d1fae5' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#1B4332' }}>🏆 Classement des classes</span>
               </div>
-              {classeRankings.length === 0 ? (
-                <div style={{ color: '#6b7280', fontSize: 12, textAlign: 'center', padding: 20 }}>Aucune donnée</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {classeRankings.map((r, i) => (
-                    <div key={r.classe.id}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>
-                          {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`} {r.classe.name}
-                        </span>
-                        <span style={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: getNoteColor(r.avg), fontWeight: 700 }}>
-                          {r.avg > 0 ? `${r.avg}/20` : '—'}
-                        </span>
+              <div style={{ padding: 14 }}>
+                {classeRankings.length === 0 ? (
+                  <div style={{ color: '#6b7280', fontSize: 12, textAlign: 'center', padding: 16 }}>Aucune donnée</div>
+                ) : (
+                  classeRankings.map((c, i) => (
+                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, fontSize: 12 }}>
+                      <span style={{ fontSize: 16, width: 24, flexShrink: 0 }}>
+                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}
+                      </span>
+                      <div style={{ width: 60, fontWeight: 700, color: '#1B4332', flexShrink: 0, fontFamily: 'Playfair Display, serif' }}>{c.name}</div>
+                      <div style={{ flex: 1, height: 8, background: '#f3f4f6', borderRadius: 4, overflow: 'hidden' }}>
+                        <div style={{ width: `${(c.moy / 20) * 100}%`, height: '100%', background: c.moy >= 14 ? '#40916C' : c.moy >= 10 ? '#d97706' : '#dc2626', borderRadius: 4 }} />
                       </div>
-                      <div style={{ background: '#f3f4f6', borderRadius: 4, height: 8, overflow: 'hidden' }}>
-                        <div style={{
-                          width: `${(r.avg / maxAvg) * 100}%`,
-                          height: '100%',
-                          background: getNoteColor(r.avg),
-                          borderRadius: 4,
-                          transition: 'width 0.3s',
-                        }} />
-                      </div>
+                      <span style={{ width: 50, textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 600, color: getNoteColor(c.moy) }}>
+                        {c.moy > 0 ? `${c.moy.toFixed(1)}/20` : '—'}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </div>
             </div>
 
-            {/* Distribution des notes */}
-            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #d1fae5', padding: 20 }}>
-              <div style={{ fontWeight: 700, fontSize: 13, color: '#1B4332', marginBottom: 14 }}>
-                📊 Distribution des notes — {classes.find(c => c.id === selectedClasseId)?.name ?? '—'}
+            {/* Distribution */}
+            <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 11, overflow: 'hidden' }}>
+              <div style={{ padding: '11px 15px', borderBottom: '1px solid #d1fae5' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#1B4332' }}>📊 Distribution des notes</span>
               </div>
-              {clsGradesTri.length === 0 ? (
-                <div style={{ color: '#6b7280', fontSize: 12, textAlign: 'center', padding: 20 }}>Aucune note saisie</div>
-              ) : (
-                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', height: 120 }}>
-                  {distribution.map(d => (
-                    <div key={d.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                      <div style={{ fontSize: 10, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: d.color }}>
-                        {d.count}
-                      </div>
-                      <div style={{ width: '100%', background: '#f3f4f6', borderRadius: '3px 3px 0 0', height: 88, display: 'flex', alignItems: 'flex-end' }}>
-                        <div style={{
-                          width: '100%',
-                          height: `${(d.count / maxDist) * 100}%`,
-                          background: d.color,
-                          borderRadius: '3px 3px 0 0',
-                          minHeight: d.count > 0 ? 4 : 0,
-                          transition: 'height 0.3s',
-                        }} />
-                      </div>
-                      <div style={{ fontSize: 9.5, color: '#6b7280', textAlign: 'center' }}>{d.label}</div>
+              <div style={{ padding: 14 }}>
+                {clsGradesTri.length === 0 ? (
+                  <div style={{ color: '#6b7280', fontSize: 12, textAlign: 'center', padding: 16 }}>Aucune note saisie</div>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 80, marginBottom: 8 }}>
+                      {distribution.map(t => (
+                        <div key={t.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                          <span style={{ fontSize: 9, color: '#6b7280' }}>{t.count}</span>
+                          <div style={{ width: '100%', height: `${Math.max(4, (t.count / maxCount) * 70)}px`, background: t.color, borderRadius: '3px 3px 0 0' }} />
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {distribution.map(t => (
+                        <div key={t.label} style={{ flex: 1, textAlign: 'center', fontSize: 9, color: '#6b7280' }}>{t.label}</div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Colonne droite */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {/* Stats par matière */}
-            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #d1fae5', padding: 20 }}>
-              <div style={{ fontWeight: 700, fontSize: 13, color: '#1B4332', marginBottom: 14 }}>
-                📚 Moyennes par matière
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Moyennes par matière */}
+            <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 11, overflow: 'hidden' }}>
+              <div style={{ padding: '11px 15px', borderBottom: '1px solid #d1fae5' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#1B4332' }}>📚 Moyennes par matière</span>
               </div>
               {subjectStats.length === 0 ? (
-                <div style={{ color: '#6b7280', fontSize: 12, textAlign: 'center', padding: 20 }}>Aucune matière configurée</div>
+                <div style={{ color: '#6b7280', fontSize: 12, textAlign: 'center', padding: 16 }}>Aucune matière</div>
               ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                   <thead>
-                    <tr style={{ background: '#f0faf3', borderBottom: '1px solid #D8F3DC' }}>
-                      <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 700, color: '#1B4332' }}>Matière</th>
-                      <th style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 700, color: '#1B4332' }}>Moy.</th>
-                      <th style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 700, color: '#1B4332' }}>Nb</th>
-                      <th style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 700, color: '#1B4332' }}>Min</th>
-                      <th style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 700, color: '#1B4332' }}>Max</th>
+                    <tr style={{ background: '#f0faf3' }}>
+                      <th style={{ ...thStat, textAlign: 'left', padding: '7px 12px' }}>Matière</th>
+                      <th style={thStat}>Moy. classe</th>
+                      <th style={thStat}>Nb notes</th>
+                      <th style={thStat}>Min</th>
+                      <th style={thStat}>Max</th>
                     </tr>
                   </thead>
                   <tbody>
                     {subjectStats.map(s => (
-                      <tr key={s.subject.id} style={{ borderBottom: '1px solid #f0faf3', background: s.avg !== null && s.avg < 10 ? '#fef2f2' : 'transparent' }}>
-                        <td style={{ padding: '7px 10px', color: '#111827', fontWeight: 500 }}>{s.subject.name}</td>
+                      <tr key={s.subject.id} style={{ borderBottom: '1px solid #f3f4f6', background: s.avg !== null && s.avg < 10 ? '#fee2e2' : 'transparent' }}>
+                        <td style={{ padding: '7px 12px', color: '#0d1f16', fontWeight: 500 }}>{s.subject.name}</td>
                         <td style={{ padding: '7px 8px', textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: s.avg !== null ? getNoteColor(s.avg) : '#d1d5db' }}>
                           {s.avg !== null ? s.avg.toFixed(1) : '—'}
                         </td>
                         <td style={{ padding: '7px 8px', textAlign: 'center', color: '#6b7280', fontFamily: 'JetBrains Mono, monospace' }}>{s.count}</td>
-                        <td style={{ padding: '7px 8px', textAlign: 'center', color: '#dc2626', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>
+                        <td style={{ padding: '7px 8px', textAlign: 'center', color: '#dc2626', fontFamily: 'JetBrains Mono, monospace', fontSize: 10 }}>
                           {s.min !== null ? s.min.toFixed(1) : '—'}
                         </td>
-                        <td style={{ padding: '7px 8px', textAlign: 'center', color: '#1B4332', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>
+                        <td style={{ padding: '7px 8px', textAlign: 'center', color: '#166534', fontFamily: 'JetBrains Mono, monospace', fontSize: 10 }}>
                           {s.max !== null ? s.max.toFixed(1) : '—'}
                         </td>
                       </tr>
@@ -928,43 +1044,43 @@ export default function NotesClient({
             </div>
 
             {/* Évolution par trimestre */}
-            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #d1fae5', padding: 20 }}>
-              <div style={{ fontWeight: 700, fontSize: 13, color: '#1B4332', marginBottom: 14 }}>
-                📈 Évolution par trimestre
+            <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 11, overflow: 'hidden' }}>
+              <div style={{ padding: '11px 15px', borderBottom: '1px solid #d1fae5' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#1B4332' }}>📈 Évolution par trimestre</span>
               </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                 <thead>
-                  <tr style={{ background: '#f0faf3', borderBottom: '1px solid #D8F3DC' }}>
-                    <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 700, color: '#1B4332' }}>Trimestre</th>
-                    <th style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 700, color: '#1B4332' }}>Moy. classe</th>
-                    <th style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 700, color: '#1B4332' }}>Moy. école</th>
-                    <th style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 700, color: '#1B4332' }}>Écart</th>
+                  <tr style={{ background: '#f0faf3' }}>
+                    <th style={{ ...thStat, textAlign: 'left', padding: '7px 12px' }}>Trimestre</th>
+                    <th style={thStat}>Moy. classe</th>
+                    <th style={thStat}>Moy. école</th>
+                    <th style={thStat}>Écart</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {classeTrends.map((row, i) => {
-                    const prev = i > 0 ? classeTrends[i - 1].clsAvg : null
+                  {classeTrends.map((row) => {
+                    const prev = row.idx > 0 ? classeTrends[row.idx - 1].clsAvg : null
                     const trend = row.clsAvg !== null && prev !== null
                       ? row.clsAvg > prev ? '↑' : row.clsAvg < prev ? '↓' : '→'
-                      : '—'
-                    const trendColor = trend === '↑' ? '#1B4332' : trend === '↓' ? '#dc2626' : '#6b7280'
+                      : null
+                    const trendColor = trend === '↑' ? '#166534' : trend === '↓' ? '#dc2626' : '#6b7280'
                     const ecart = row.clsAvg !== null && row.schoolAvg !== null
                       ? Math.round((row.clsAvg - row.schoolAvg) * 10) / 10
                       : null
                     return (
-                      <tr key={row.t} style={{ borderBottom: '1px solid #f0faf3', background: row.t === selectedTrimestre ? '#f0faf3' : 'transparent' }}>
-                        <td style={{ padding: '7px 10px', fontWeight: row.t === selectedTrimestre ? 700 : 400, color: '#374151' }}>
-                          T{row.t} {row.t === selectedTrimestre ? '●' : ''}
+                      <tr key={row.t} style={{ borderBottom: '1px solid #f3f4f6', background: row.t === selectedTrimestre ? '#f0faf3' : 'transparent' }}>
+                        <td style={{ padding: '7px 12px', fontWeight: row.t === selectedTrimestre ? 700 : 400, color: '#374151' }}>
+                          T{row.t} {row.t === selectedTrimestre && <span style={{ color: '#1B4332' }}>●</span>}
                         </td>
                         <td style={{ padding: '7px 8px', textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', color: row.clsAvg !== null ? getNoteColor(row.clsAvg) : '#d1d5db', fontWeight: 700 }}>
                           {row.clsAvg !== null ? `${row.clsAvg}/20` : '—'}
                         </td>
-                        <td style={{ padding: '7px 8px', textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', color: '#6b7280', fontSize: 11 }}>
+                        <td style={{ padding: '7px 8px', textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', color: '#6b7280', fontSize: 10 }}>
                           {row.schoolAvg !== null ? `${row.schoolAvg}/20` : '—'}
                         </td>
                         <td style={{ padding: '7px 8px', textAlign: 'center' }}>
                           <span style={{ fontFamily: 'JetBrains Mono, monospace', color: trendColor, fontWeight: 700, fontSize: 12 }}>
-                            {trend !== '—' && trend} {ecart !== null ? (ecart > 0 ? `+${ecart}` : `${ecart}`) : ''}
+                            {trend && `${trend} `}{ecart !== null ? (ecart > 0 ? `+${ecart}` : `${ecart}`) : '—'}
                           </span>
                         </td>
                       </tr>
@@ -982,9 +1098,9 @@ export default function NotesClient({
   // ── Main render ──
 
   return (
-    <div style={{ fontFamily: 'Source Sans 3, sans-serif', fontSize: 13, color: '#111827' }}>
+    <div style={{ fontFamily: 'Source Sans 3, sans-serif', fontSize: 13, color: '#0d1f16' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
           <div style={{ fontFamily: 'Playfair Display, serif', fontSize: 22, fontWeight: 700, color: '#1B4332' }}>
             Notes &amp; Bulletins
@@ -993,48 +1109,97 @@ export default function NotesClient({
             {schoolYear} · {classes.length} classes · {students.length} élèves
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Button variant="outline" onClick={() => window.print()}>📄 Exporter</Button>
+        <Button variant="outline" onClick={() => window.print()}>📄 Exporter</Button>
+      </div>
+
+      {/* Stats cards — 5 colonnes */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: 18 }}>
+        {/* Notes saisies */}
+        <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 10, padding: '13px 15px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+            <span style={{ fontSize: 18 }}>📝</span>
+            <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 999, fontWeight: 500, background: '#D8F3DC', color: '#1B4332' }}>Total</span>
+          </div>
+          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 22, fontWeight: 500, color: '#1B4332', marginBottom: 2 }}>{totalNotes}</div>
+          <div style={{ fontSize: 11, color: '#6b7280' }}>Notes saisies</div>
+        </div>
+
+        {/* Moyenne générale */}
+        <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 10, padding: '13px 15px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+            <span style={{ fontSize: 18 }}>📊</span>
+            <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 999, fontWeight: 500, background: moyenneGenerale >= 12 ? '#dbeafe' : '#fff4ec', color: moyenneGenerale >= 12 ? '#1e40af' : '#c2410c' }}>
+              {moyenneGenerale >= 12 ? 'Bien' : 'À améliorer'}
+            </span>
+          </div>
+          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 22, fontWeight: 500, color: '#1B4332', marginBottom: 2 }}>
+            {moyenneGenerale > 0 ? `${moyenneGenerale}/20` : '—'}
+          </div>
+          <div style={{ fontSize: 11, color: '#6b7280' }}>Moyenne générale</div>
+        </div>
+
+        {/* Matières complètes */}
+        <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 10, padding: '13px 15px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+            <span style={{ fontSize: 18 }}>✅</span>
+            <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 999, fontWeight: 500, background: '#D8F3DC', color: '#1B4332' }}>
+              sur {classeSubjects.length}
+            </span>
+          </div>
+          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 22, fontWeight: 500, color: '#1B4332', marginBottom: 2 }}>{matieresCompletes}</div>
+          <div style={{ fontSize: 11, color: '#6b7280' }}>Matières complètes</div>
+        </div>
+
+        {/* Notes manquantes */}
+        <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 10, padding: '13px 15px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+            <span style={{ fontSize: 18 }}>⏳</span>
+            <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 999, fontWeight: 500, background: noteManquantes > 0 ? '#fee2e2' : '#D8F3DC', color: noteManquantes > 0 ? '#dc2626' : '#1B4332' }}>
+              {noteManquantes > 0 ? 'Incomplet' : 'Complet'}
+            </span>
+          </div>
+          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 22, fontWeight: 500, color: noteManquantes > 0 ? '#dc2626' : '#1B4332', marginBottom: 2 }}>{noteManquantes}</div>
+          <div style={{ fontSize: 11, color: '#6b7280' }}>Notes manquantes</div>
+        </div>
+
+        {/* Classes actives */}
+        <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 10, padding: '13px 15px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+            <span style={{ fontSize: 18 }}>🏫</span>
+            <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 999, fontWeight: 500, background: '#D8F3DC', color: '#1B4332' }}>Actives</span>
+          </div>
+          <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 22, fontWeight: 500, color: '#1B4332', marginBottom: 2 }}>{classes.length}</div>
+          <div style={{ fontSize: 11, color: '#6b7280' }}>Classes actives</div>
         </div>
       </div>
 
-      {/* Stats cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
-        <StatCard icon="📝" label="Notes saisies" value={totalNotes} variant="vert" />
-        <StatCard
-          icon="📊"
-          label="Moyenne générale"
-          value={moyenneGenerale > 0 ? `${moyenneGenerale}/20` : '—'}
-          variant="bleu"
-        />
-        <StatCard icon="✅" label="Matières complètes" value={matieresCompletes} variant="vert" sub={`sur ${classeSubjects.length} matières`} />
-        <StatCard icon="⏳" label="Notes manquantes" value={noteManquantes} variant="orange" sub={`T${selectedTrimestre} · ${classes.find(c => c.id === selectedClasseId)?.name ?? ''}`} />
-      </div>
-
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: 22, borderBottom: '2px solid #e5e7eb' }}>
+      {/* Tabs — pill style */}
+      <div style={{ display: 'flex', gap: 2, background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 11, padding: 4, marginBottom: 18, width: 'fit-content' }}>
         {([
-          { key: 'saisie', label: '📝 Saisie des notes' },
-          { key: 'bulletins', label: '📋 Bulletins' },
-          { key: 'stats', label: '📊 Statistiques' },
-        ] as const).map(tab => (
+          { key: 'saisie' as const, label: '📝 Saisie des notes', badge: noteManquantes > 0 ? String(Math.min(noteManquantes, 99)) : null },
+          { key: 'bulletins' as const, label: '📋 Bulletins', badge: null },
+          { key: 'stats' as const, label: '📊 Statistiques', badge: null },
+        ]).map(tab => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             style={{
-              padding: '9px 18px',
-              border: 'none',
-              background: 'none',
-              fontSize: 13,
-              fontWeight: activeTab === tab.key ? 700 : 500,
-              color: activeTab === tab.key ? '#1B4332' : '#6b7280',
-              cursor: 'pointer',
-              borderBottom: `3px solid ${activeTab === tab.key ? '#1B4332' : 'transparent'}`,
-              marginBottom: -2,
-              transition: 'all 0.15s',
+              padding: '7px 18px', borderRadius: 8, fontSize: 12, fontWeight: 500,
+              border: 'none', cursor: 'pointer',
+              background: activeTab === tab.key ? '#1B4332' : 'transparent',
+              color: activeTab === tab.key ? '#ffffff' : '#6b7280',
+              display: 'flex', alignItems: 'center', gap: 6,
+              fontFamily: 'Source Sans 3, sans-serif', transition: 'all 0.15s',
             }}
           >
             {tab.label}
+            {tab.badge && (
+              <span style={{
+                background: activeTab === tab.key ? 'rgba(255,255,255,0.25)' : '#dc2626',
+                color: '#ffffff', fontSize: 9, fontWeight: 700,
+                padding: '1px 5px', borderRadius: 999,
+              }}>{tab.badge}</span>
+            )}
           </button>
         ))}
       </div>
@@ -1058,6 +1223,7 @@ export default function NotesClient({
       {showAddSubject && (
         <AddSubjectModal
           classId={selectedClasseId}
+          className={classes.find(c => c.id === selectedClasseId)?.name ?? ''}
           onClose={() => setShowAddSubject(false)}
           onCreated={handleSubjectCreated}
         />
