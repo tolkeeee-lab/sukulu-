@@ -641,7 +641,7 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
                 <div style={{ width: 52, height: 52, background: '#F4A261', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 700, color: '#1B4332', flexShrink: 0 }}>S</div>
                 <div>
                   <div style={{ fontFamily: "'Playfair Display', serif", fontSize: isMobile ? 14 : 18, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{schoolName || 'École Primaire Les Étoiles'}</div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>Établissement d&apos;enseignement général</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>Établissement d'enseignement général</div>
                 </div>
               </div>
               <span style={{ background: '#F4A261', color: '#1B4332', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 700, alignSelf: 'flex-start' }}>
@@ -998,7 +998,7 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
 
       {/* Orange alert */}
       <div style={{ background: '#fff4ec', border: '1px solid #fed7aa', borderRadius: 8, padding: isMobile ? '8px 10px' : '10px 14px', marginBottom: 14, fontSize: isMobile ? 11 : 12, color: '#9a3412', display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-        <span>⚠️ <strong>CE1-A, 2nde-A, 1ère-C</strong> n&apos;ont aucune note saisie ce trimestre. Relancez les enseignants.</span>
+        <span>⚠️ <strong>CE1-A, 2nde-A, 1ère-C</strong> n'ont aucune note saisie ce trimestre. Relancez les enseignants.</span>
         <span onClick={() => showToast('Relances envoyées !')} style={{ cursor: 'pointer', fontWeight: 600, textDecoration: 'underline', whiteSpace: 'nowrap' }}>Envoyer relances →</span>
       </div>
 
@@ -1114,7 +1114,7 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
             </div>
             <div style={{ background: '#D8F3DC', borderRadius: 7, padding: '9px 13px', marginBottom: 14, fontSize: 12, color: '#1B4332', display: 'flex', gap: 8 }}>
               <span>ℹ️</span>
-              <span>L&apos;IA analysera les notes et générera une appréciation personnalisée pour cet élève.</span>
+              <span>L'IA analysera les notes et générera une appréciation personnalisée pour cet élève.</span>
             </div>
             <div style={{ marginBottom: 14 }}>
               <FieldLabel>Élève</FieldLabel>
