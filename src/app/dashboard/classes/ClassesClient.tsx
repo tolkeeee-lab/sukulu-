@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import StatCard from '@/components/ui/StatCard'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
@@ -180,6 +181,7 @@ export default function ClassesClient({
   schoolName,
 }: ClassesClientProps) {
   // ── State ──────────────────────────────────────────────────────────────────
+  const isMobile = useIsMobile()
   const [classes, setClasses] = useState<Classe[]>(initialClasses)
   const [niveauTab, setNiveauTab] = useState<NiveauTab>('Toutes')
   const [search, setSearch] = useState('')
@@ -403,27 +405,27 @@ export default function ClassesClient({
   return (
     <div style={{ fontFamily: 'Source Sans 3, sans-serif', fontSize: 13, color: '#1f2937' }}>
       {/* ── Header ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 20 }}>
         <div>
-          <div style={{ fontFamily: 'Playfair Display, serif', fontSize: 22, fontWeight: 700, color: '#1B4332', marginBottom: 4 }}>
+          <div style={{ fontFamily: 'Playfair Display, serif', fontSize: isMobile ? 18 : 22, fontWeight: 700, color: '#1B4332', marginBottom: 4 }}>
             Gestion des Classes
           </div>
           <div style={{ fontSize: 12, color: '#6b7280' }}>
             {schoolName} · {classes.length} classe{classes.length !== 1 ? 's' : ''} · {totalEleves} élève{totalEleves !== 1 ? 's' : ''} · {schoolYear}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Button variant="outline" onClick={() => window.print()}>
+        <div style={{ display: 'flex', gap: 8, width: isMobile ? '100%' : undefined }}>
+          <Button variant="outline" onClick={() => window.print()} style={isMobile ? { flex: 1 } : {}}>
             📄 Exporter
           </Button>
-          <Button onClick={openCreate}>
+          <Button onClick={openCreate} style={isMobile ? { flex: 1 } : {}}>
             + Nouvelle classe
           </Button>
         </div>
       </div>
 
       {/* ── Stats ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: 12, marginBottom: 20 }}>
         <StatCard icon="🏫" label="Total classes" value={classes.length} variant="vert" />
         <StatCard icon="👦" label="Total élèves inscrits" value={totalEleves} variant="bleu" />
         <StatCard
@@ -456,10 +458,11 @@ export default function ClassesClient({
       <div style={{
         background: '#fff', border: '1px solid #d1fae5', borderRadius: 10,
         padding: '10px 16px', marginBottom: 16,
-        display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+        display: 'flex', alignItems: isMobile ? 'stretch' : 'center', gap: 12,
+        flexWrap: 'wrap', flexDirection: isMobile ? 'column' : 'row',
       }}>
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           {(['Toutes', 'Primaire', 'Collège', 'Lycée'] as NiveauTab[]).map(tab => (
             <button
               key={tab}
@@ -483,12 +486,12 @@ export default function ClassesClient({
           value={search}
           onChange={e => setSearch(e.target.value)}
           style={{
-            ...inputStyle, width: 240, padding: '6px 12px',
+            ...inputStyle, width: isMobile ? '100%' : 240, padding: '6px 12px',
             border: '1px solid #d1d5db', flexShrink: 0,
           }}
         />
         {/* View switch */}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+        <div style={{ marginLeft: isMobile ? undefined : 'auto', display: 'flex', gap: 4 }}>
           <button
             onClick={() => setViewMode('grille')}
             title="Vue grille"
@@ -575,7 +578,7 @@ export default function ClassesClient({
           <div style={{ padding: '20px 24px' }}>
             {detailTab === 'info' && (
               <div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16, marginBottom: 20 }}>
                   {[
                     ['Nom de la classe', selectedClasse.name],
                     ['Niveau', NIVEAU_LABELS[selectedClasse.level ?? ''] ?? selectedClasse.level ?? '—'],
@@ -724,6 +727,7 @@ export default function ClassesClient({
       ) : viewMode === 'tableau' ? (
         // ── Table view ──
         <div style={{ background: '#fff', border: '1px solid #d1fae5', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: '#f0faf3', borderBottom: '1px solid #d1fae5' }}>
@@ -823,10 +827,11 @@ export default function ClassesClient({
               </tr>
             </tfoot>
           </table>
+          </div>
         </div>
       ) : (
         // ── Stats view ──
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
           {/* Colonne gauche */}
           <div>
             {/* Section 1 — Remplissage par classe */}
