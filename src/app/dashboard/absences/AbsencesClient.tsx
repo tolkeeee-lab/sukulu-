@@ -213,10 +213,11 @@ export default function AbsencesClient({
   const filteredStudents = useMemo(() => {
     if (filterStatus === 'all') return classStudents
     return classStudents.filter(s => {
-      const att = getAttendance(s.id, selectedDate, selectedClassId)
+      const att = localAttendances.find(
+        a => a.student_id === s.id && a.date === selectedDate && a.class_id === selectedClassId
+      )
       return att?.status === filterStatus
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [classStudents, filterStatus, selectedDate, selectedClassId, localAttendances])
 
   // ── Week dates for overview ────────────────────────────────────────────────
