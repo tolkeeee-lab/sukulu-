@@ -42,43 +42,26 @@ export async function POST(req: NextRequest) {
 
   const supabase = getSupabase()
 
-  // Récupérer les paiements existants pour cet élève et ce trimestre
-  const { data: existing } = await supabase
+  // Get total already paid for this student/term
+  const { data: existingPayments } = await supabase
     .from('payments')
-    .select('id, amount, status')
+    .select('amount')
     .eq('school_id', schoolId)
     .eq('student_id', body.student_id)
     .eq('term', body.term ?? 1)
-    .maybeSingle()
 
+  const alreadyPaid = (existingPayments ?? []).reduce((s: number, p: { amount: number }) => s + (p.amount ?? 0), 0)
+  const newTotal = alreadyPaid + body.amount
   const receiptNumber = `REC-${Date.now()}`
 
-  if (existing?.id) {
-    const newTotal = (existing.amount ?? 0) + body.amount
-    const { data, error } = await supabase
-      .from('payments')
-      .update({
-        amount: newTotal,
-        payment_method: body.payment_method ?? null,
-        receipt_number: receiptNumber,
-        paid_at: new Date().toISOString(),
-        status: 'partial',
-      })
-      .eq('id', existing.id)
-      .select()
-      .single()
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ payment: data })
-  }
-
+  // Insert a new payment record (each payment is its own record)
   const { data, error } = await supabase
     .from('payments')
     .insert({
       school_id: schoolId,
       student_id: body.student_id,
       amount: body.amount,
-      status: 'partial',
+      status: 'partial', // individual record status; full status computed client-side
       payment_method: body.payment_method ?? null,
       receipt_number: receiptNumber,
       paid_at: new Date().toISOString(),
@@ -88,5 +71,7 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ payment: data }, { status: 201 })
+
+  // Return the new payment + updated total so client can recompute status
+  return NextResponse.json({ payment: data, newTotal }, { status: 201 })
 }

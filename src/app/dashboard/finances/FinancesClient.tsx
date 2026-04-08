@@ -191,7 +191,8 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
   useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current) }, [])
 
   // ── Computed: Frais scolaires ────────────────────────────────────────────────
-  const FRAIS_ANNUEL = 150_000 // montant annuel par défaut (à remplacer si dispo dans school config)
+  // Default annual fee per student — should ideally come from school configuration
+  const FRAIS_ANNUEL = 150_000
   const FRAIS_TRIM = Math.round(FRAIS_ANNUEL / 3)
 
   // All students from payments
@@ -359,16 +360,8 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
         }),
       })
       if (res.ok) {
-        const { payment } = await res.json() as { payment: Payment }
-        setPayments(prev => {
-          const idx = prev.findIndex(p => p.id === payment.id)
-          if (idx >= 0) {
-            const next = [...prev]
-            next[idx] = payment
-            return next
-          }
-          return [...prev, payment]
-        })
+        const { payment } = await res.json() as { payment: Payment; newTotal: number }
+        setPayments(prev => [...prev, payment])
         showToast('✅ Paiement enregistré')
         setModalOuvert(null)
         setModalAmount('')
