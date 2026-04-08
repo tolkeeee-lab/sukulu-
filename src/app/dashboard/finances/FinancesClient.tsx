@@ -1123,7 +1123,7 @@ function Modal({ children, onClose, title, isMobile = false }: { children: React
     }} onClick={onClose}>
       <div style={{
         background: '#fff', borderRadius: 14, padding: 22,
-        width: isMobile ? '95vw' : 480,
+        width: isMobile ? '95vw' : '480px',
         maxHeight: '90vh', overflowY: 'auto',
         boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
       }} onClick={e => e.stopPropagation()}>
