@@ -445,24 +445,29 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
     <div style={{ fontFamily: "'Source Sans 3', sans-serif", color: '#0d1f16', paddingBottom: 40 }}>
 
       {/* ── Header ── */}
-      <div style={{ marginBottom: 18 }}>
-        <h1 style={{
-          fontFamily: "'Playfair Display', serif",
-          fontSize: isMobile ? 20 : 24, fontWeight: 700, color: '#1B4332', margin: 0,
-        }}>
-          💰 Finances
-        </h1>
-        <p style={{ fontSize: 12, color: '#6b7280', margin: '4px 0 0' }}>
-          Gestion financière · Année {schoolYear}
-        </p>
+      <div style={{
+        display: 'flex', flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'flex-start' : 'center',
+        justifyContent: 'space-between', gap: 12, marginBottom: 18, flexWrap: 'wrap',
+      }}>
+        <div>
+          <h1 style={{
+            fontFamily: "'Playfair Display', serif",
+            fontSize: isMobile ? 20 : 24, fontWeight: 700, color: '#1B4332', margin: 0,
+          }}>
+            💰 Finances
+          </h1>
+          <p style={{ fontSize: 12, color: '#6b7280', margin: '4px 0 0' }}>
+            Gestion financière · Année {schoolYear}
+          </p>
+        </div>
       </div>
 
       {/* ── Tabs ── */}
       <div style={{
-        display: 'flex', gap: 4, padding: '6px 8px',
+        display: 'flex', gap: 4, padding: isMobile ? '4px 6px' : '6px 8px',
         background: '#f0faf3', borderRadius: 12, border: '1px solid #d1fae5',
-        marginBottom: 20, overflowX: 'auto',
-        flexWrap: isMobile ? 'nowrap' : 'wrap',
+        marginBottom: 20, flexWrap: 'wrap',
       }}>
         {([
           ['dashboard', '📊', 'Dashboard'],
@@ -674,14 +679,14 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
                     <span style={{ fontSize: 10, color: '#6b7280', whiteSpace: 'nowrap', fontFamily: "'JetBrains Mono', monospace' " }}>{r.pct}%</span>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button style={btnPrimary} onClick={() => {
+                    <button style={{ ...btnPrimary, flex: 1 }} onClick={() => {
                       setModalStudentId(r.student.id)
                       setModalOuvert(`paiement-${r.student.id}`)
                     }}>
                       + Payer
                     </button>
-                    <button style={btnOutline} onClick={() => showToast('📩 Relance envoyée')}>📩</button>
-                    <button style={btnOutline} onClick={() => showToast('🧾 Reçu affiché')}>🧾</button>
+                    <button style={{ ...btnOutline, flex: 1 }} onClick={() => showToast('📩 Relance envoyée')}>📩</button>
+                    <button style={{ ...btnOutline, flex: 1 }} onClick={() => showToast('🧾 Reçu affiché')}>🧾</button>
                   </div>
                 </div>
               ))}
@@ -914,14 +919,65 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
             }}>
               Aucun reçu généré
             </div>
+          ) : isMobile ? (
+            // ── MOBILE: Cards ──
+            <div>
+              {reçus.map(p => (
+                <div key={p.id} style={{
+                  background: '#fff', border: '1px solid #d1fae5', borderRadius: 10,
+                  padding: 12, marginBottom: 10,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 8,
+                      background: '#D8F3DC', color: '#1B4332',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 18, flexShrink: 0,
+                    }}>
+                      🧾
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#0d1f16', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {p.students ? `${p.students.first_name} ${p.students.last_name}` : '—'}
+                      </div>
+                      <div style={{ fontSize: 10, color: '#6b7280' }}>
+                        {p.students?.classes?.name ?? '—'} · Trimestre {p.term ?? 1}
+                      </div>
+                    </div>
+                    <div style={{
+                      fontSize: 13, fontWeight: 700, color: '#1B4332',
+                      fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap',
+                    }}>
+                      {fmt(p.amount)}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <div style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 11, color: '#6b7280', background: '#f3f4f6',
+                      padding: '2px 8px', borderRadius: 5,
+                    }}>
+                      {p.receipt_number}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#6b7280' }}>
+                      {p.paid_at ? new Date(p.paid_at).toLocaleDateString('fr-FR') : '—'}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button style={{ ...btnOutline, flex: 1 }} onClick={() => showToast('🖨️ Impression lancée')}>🖨️ Imprimer</button>
+                    <button style={{ ...btnOutline, flex: 1 }} onClick={() => showToast('📧 Reçu envoyé par e-mail')}>📧 E-mail</button>
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
+            // ── DESKTOP: List ──
             <div style={{ background: '#fff', border: '1px solid #d1fae5', borderRadius: 12, overflow: 'hidden' }}>
               {reçus.map((p, i) => (
                 <div key={p.id} style={{
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '12px 16px',
                   borderBottom: i < reçus.length - 1 ? '1px solid #f0f0f0' : 'none',
-                  flexWrap: isMobile ? 'wrap' : 'nowrap',
                 }}>
                   <div style={{
                     width: 36, height: 36, borderRadius: 8,
@@ -970,7 +1026,7 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
           MODAL: PAIEMENT
          ══════════════════════════════════════════════════════════════ */}
       {modalOuvert?.startsWith('paiement') && (
-        <Modal onClose={() => setModalOuvert(null)} title="💳 Enregistrer un paiement">
+        <Modal onClose={() => setModalOuvert(null)} title="💳 Enregistrer un paiement" isMobile={isMobile}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
               <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 5 }}>
@@ -1026,7 +1082,7 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
           MODAL: BUDGET
          ══════════════════════════════════════════════════════════════ */}
       {modalOuvert === 'budget' && (
-        <Modal onClose={() => setModalOuvert(null)} title="📋 Modifier le budget">
+        <Modal onClose={() => setModalOuvert(null)} title="📋 Modifier le budget" isMobile={isMobile}>
           <div style={{ color: '#6b7280', fontSize: 12, padding: '20px 0', textAlign: 'center' }}>
             La modification du budget se fait depuis le tableau de bord administratif Supabase.
           </div>
@@ -1057,7 +1113,7 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
 
 // ─── Modal wrapper ────────────────────────────────────────────────────────────
 
-function Modal({ children, onClose, title }: { children: React.ReactNode; onClose: () => void; title: string }) {
+function Modal({ children, onClose, title, isMobile = false }: { children: React.ReactNode; onClose: () => void; title: string; isMobile?: boolean }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9000,
@@ -1067,7 +1123,8 @@ function Modal({ children, onClose, title }: { children: React.ReactNode; onClos
     }} onClick={onClose}>
       <div style={{
         background: '#fff', borderRadius: 14, padding: 22,
-        width: '100%', maxWidth: 420,
+        width: isMobile ? '95vw' : 480,
+        maxHeight: '90vh', overflowY: 'auto',
         boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
       }} onClick={e => e.stopPropagation()}>
         <div style={{
@@ -1134,9 +1191,9 @@ function StaffSection({
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
                 {!m.salary_paid && (
-                  <button style={btnPrimary} onClick={() => onVirer(m.id)}>💸 Virer</button>
+                  <button style={{ ...btnPrimary, flex: 1 }} onClick={() => onVirer(m.id)}>💸 Virer</button>
                 )}
-                <button style={btnOutline} onClick={() => onFiche(m.id)}>📄 Fiche</button>
+                <button style={{ ...btnOutline, flex: 1 }} onClick={() => onFiche(m.id)}>📄 Fiche</button>
               </div>
             </div>
           ))}
