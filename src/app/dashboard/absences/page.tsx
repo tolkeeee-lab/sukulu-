@@ -15,7 +15,7 @@ export default async function AbsencesPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('school_id, role, full_name, schools(name, school_year)')
+    .select('school_id, role, full_name, schools(name)')
     .eq('id', userId)
     .single()
 
@@ -23,14 +23,13 @@ export default async function AbsencesPage() {
 
   const schoolId = profile.school_id
   const schoolsData = Array.isArray(profile.schools) ? profile.schools[0] : profile.schools
-  const schoolYear =
-    (schoolsData as { school_year?: string } | null)?.school_year ??
-    (() => {
-      const now = new Date()
-      const y = now.getFullYear()
-      return now.getMonth() + 1 >= 9 ? `${y}-${y + 1}` : `${y - 1}-${y}`
-    })()
   const schoolName = (schoolsData as { name?: string } | null)?.name ?? ''
+
+  const schoolYear = (() => {
+    const now = new Date()
+    const y = now.getFullYear()
+    return now.getMonth() + 1 >= 9 ? `${y}-${y + 1}` : `${y - 1}-${y}`
+  })()
 
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
