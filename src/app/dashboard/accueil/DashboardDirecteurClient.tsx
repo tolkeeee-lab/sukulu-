@@ -1,5 +1,7 @@
 'use client'
 
+import { useIsMobile } from '@/hooks/useIsMobile'
+
 type EncaissementMois = { mois: string; montant: number }
 type ClasseStat = { id: string; name: string; totalEleves: number; enseignant: string; moyenne: number | null }
 type ActiviteItem = { id: string; action: string; entity: string; entity_id: string | null; created_at: string }
@@ -99,16 +101,17 @@ export default function DashboardDirecteurClient({
   activiteRecente,
   inscriptionsEnAttente,
 }: Props) {
+  const isMobile = useIsMobile()
   const maxMontant = Math.max(...encaissementsParMois.map(m => m.montant), 1)
   const schoolYear = getCurrentSchoolYear()
 
   return (
-    <div style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 13, color: '#0d1f16' }}>
+    <div style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 13, color: '#0d1f16', padding: isMobile ? '12px 8px' : undefined }}>
 
       {/* ── Page Header ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 18 }}>
         <div>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 600, color: '#1B4332', marginBottom: 3 }}>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: isMobile ? 18 : 20, fontWeight: 600, color: '#1B4332', marginBottom: 3 }}>
             Tableau de bord
           </div>
           <div style={{ fontSize: 12, color: '#6b7280' }}>
@@ -117,11 +120,11 @@ export default function DashboardDirecteurClient({
             <span>{getTodayLabel()}</span>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button style={{ background: '#ffffff', border: '1px solid #d1fae5', color: '#6b7280', borderRadius: 7, padding: '7px 13px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'inherit' }}>
+        <div style={{ display: 'flex', gap: 8, flexDirection: isMobile ? 'column' : 'row', width: isMobile ? '100%' : undefined }}>
+          <button style={{ background: '#ffffff', border: '1px solid #d1fae5', color: '#6b7280', borderRadius: 7, padding: '7px 13px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'inherit', width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'center' : undefined }}>
             📊 Rapport mensuel
           </button>
-          <button style={{ background: '#1B4332', border: 'none', color: '#ffffff', borderRadius: 7, padding: '7px 13px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'inherit' }}>
+          <button style={{ background: '#1B4332', border: 'none', color: '#ffffff', borderRadius: 7, padding: '7px 13px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'inherit', width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'center' : undefined }}>
             💬 Message aux parents
           </button>
         </div>
@@ -163,7 +166,7 @@ export default function DashboardDirecteurClient({
       </div>
 
       {/* ── 4 grandes stat cards ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
 
         {/* Élèves */}
         <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 12, padding: 16 }}>
@@ -211,7 +214,7 @@ export default function DashboardDirecteurClient({
       </div>
 
       {/* ── Grille 2/3 - 1/3 ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14, marginBottom: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr', gap: 14, marginBottom: 14 }}>
 
         {/* Activité récente */}
         <div style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: 10, overflow: 'hidden' }}>
@@ -373,7 +376,7 @@ export default function DashboardDirecteurClient({
               Aucune classe trouvée pour cette année scolaire.
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 8 }}>
               {classesStats.map(c => (
                 <div key={c.id} style={{ background: '#f0faf3', border: '1px solid #d1fae5', borderRadius: 8, padding: '10px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
