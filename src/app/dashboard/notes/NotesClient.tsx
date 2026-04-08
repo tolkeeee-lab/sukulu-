@@ -141,8 +141,12 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
 
   // ── Save grade via API ───────────────────────────────────────────────────────
   async function handleSaveGrade(studentId: string, subjectId: string, classId: string, value: string) {
+    if (value.trim() === '') return
     const num = parseFloat(value)
-    if (!value || isNaN(num) || num < 0 || num > 20) return
+    if (isNaN(num) || num < 0 || num > 20) {
+      showToast('\u26a0\ufe0f Note invalide (0\u201320)')
+      return
+    }
     const res = await fetch('/api/grades', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -156,15 +160,22 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
       }),
     })
     if (res.ok) showToast('\u2713 Note sauvegard\u00e9e')
-    else showToast('\u274c Erreur lors de l\'enregistrement')
+    else {
+      const err = await res.json().catch(() => ({ error: '' })) as { error?: string }
+      showToast(`\u274c ${err.error || 'Erreur lors de l\'enregistrement'}`)
+    }
   }
 
   // ── Add subject via API ──────────────────────────────────────────────────────
   async function handleAddSubject(e: React.FormEvent) {
     e.preventDefault()
+    if (!newSubjectName.trim()) {
+      showToast('\u274c Veuillez saisir le nom de la mati\u00e8re')
+      return
+    }
     const coef = parseInt(newSubjectCoef)
-    if (!newSubjectName.trim() || isNaN(coef) || coef < 1 || coef > 9) {
-      showToast('\u274c Nom et coefficient requis (1\u20139)')
+    if (isNaN(coef) || coef < 1 || coef > 9) {
+      showToast('\u274c Le coefficient doit \u00eatre entre 1 et 9')
       return
     }
     const res = await fetch('/api/subjects', {
@@ -180,7 +191,8 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
       setShowSubjectModal(false)
       showToast('\u2713 Mati\u00e8re ajout\u00e9e')
     } else {
-      showToast('\u274c Erreur lors de l\'ajout')
+      const err = await res.json().catch(() => ({ error: '' })) as { error?: string }
+      showToast(`\u274c ${err.error || 'Erreur lors de l\'ajout'}`)
     }
   }
 
@@ -610,6 +622,7 @@ export default function NotesClient({ schoolId, schoolYear, schoolName, userId, 
                               max={20}
                               step={0.5}
                               value={val}
+                              aria-label={`Note de ${nom} en ${sub.name}`}
                               onChange={e => setLocalGrades(prev => ({ ...prev, [key]: e.target.value }))}
                               onBlur={e => handleSaveGrade(row.student.id, sub.id, selectedClasseId, e.target.value)}
                               style={{
