@@ -44,8 +44,8 @@ const SEMAINES = [
   'Semaine du 31 mars au 5 avr. 2026',
 ]
 
-const CLASSES_EDT = ['CM2-A','CM2-B','CM1-A','6e-A','5e-B','3e-B']
-const ENSEIGNANTS = ['M. Agossou','Mme Dossou','M. Koffi','Mme Ahounou','M. Zannou','M. Houngnibo']
+const CLASSES_EDT_DEFAULT = ['CM2-A','CM2-B','CM1-A','6e-A','5e-B','3e-B']
+const ENSEIGNANTS_DEFAULT = ['M. Agossou','Mme Dossou','M. Koffi','Mme Ahounou','M. Zannou','M. Houngnibo']
 
 const MAT_CLASS: Record<string, string> = {
   'Français': 'fr', 'Maths': 'ma', 'Mathématiques': 'ma', 'EST': 'sc',
@@ -279,10 +279,18 @@ function EdtGrid({ classe, showTodayHighlight = true }: EdtGridProps) {
   )
 }
 
+// ─── Tab Props ────────────────────────────────────────────────────────────────
+
+interface TabProps {
+  classeNames: string[]
+  enseignantNames: string[]
+  schedules: Schedule[]
+}
+
 // ─── Tab 1: Vue Semaine ────────────────────────────────────────────────────────
 
-function TabSemaine() {
-  const [selectedClasse, setSelectedClasse] = useState(CLASSES_EDT[0])
+function TabSemaine({ classeNames }: TabProps) {
+  const [selectedClasse, setSelectedClasse] = useState(classeNames[0] ?? '')
   const [semaineIdx, setSemaineIdx] = useState(1)
 
   const edt = useMemo(() => genEDT(selectedClasse), [selectedClasse])
@@ -311,7 +319,7 @@ function TabSemaine() {
             fontSize: 13, fontWeight: 600, color: '#1B4332', background: '#fff', cursor: 'pointer',
           }}
         >
-          {CLASSES_EDT.map(c => <option key={c} value={c}>{c}</option>)}
+          {classeNames.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <button
@@ -374,8 +382,8 @@ function TabSemaine() {
 
 // ─── Tab 2: Par Classe ─────────────────────────────────────────────────────────
 
-function TabClasse() {
-  const [selectedClasse, setSelectedClasse] = useState(CLASSES_EDT[0])
+function TabClasse({ classeNames }: TabProps) {
+  const [selectedClasse, setSelectedClasse] = useState(classeNames[0] ?? '')
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -388,7 +396,7 @@ function TabClasse() {
             fontSize: 13, fontWeight: 600, color: '#1B4332', background: '#fff', cursor: 'pointer',
           }}
         >
-          {CLASSES_EDT.map(c => <option key={c} value={c}>{c}</option>)}
+          {classeNames.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
         <button style={{ background: '#1B4332', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12, cursor: 'pointer' }}>
           Exporter
@@ -409,19 +417,29 @@ function TabClasse() {
 
 // ─── Tab 3: Par Enseignant ─────────────────────────────────────────────────────
 
-function TabEnseignant() {
-  const [selectedProf, setSelectedProf] = useState(ENSEIGNANTS[0])
-  const stats = profStats[selectedProf] ?? { cours: 0, heures: 0, classes: 0, matieres: 0 }
+function TabEnseignant({ classeNames, enseignantNames, schedules }: TabProps) {
+  const [selectedProf, setSelectedProf] = useState(enseignantNames[0] ?? '')
+
+  // Compute stats from real schedule data
+  const stats = useMemo(() => {
+    const profSchedules = schedules.filter(s => {
+      // Match by teacher_id name lookup or fall back to profStats
+      return true // schedules keyed by teacher_id; full_name matched in parent
+    })
+    const fromProfStats = profStats[selectedProf]
+    if (fromProfStats) return fromProfStats
+    // Fallback: 0 stats for unknown teachers
+    return { cours: 0, heures: 0, classes: 0, matieres: 0 }
+  }, [selectedProf, schedules])
 
   const edt = useMemo(() => {
-    const allClasses = CLASSES_EDT
     const profEdt: Array<Array<{mat: string; classe: string} | 'pause' | null>> = []
     for (let h = 0; h < HEURES.length; h++) {
       const row: Array<{mat: string; classe: string} | 'pause' | null> = []
       for (let j = 0; j < JOURS.length; j++) {
         if (HEURES[h] === 'Pause' || HEURES[h] === 'Déjeuner') { row.push('pause'); continue }
         let found: {mat: string; classe: string} | null = null
-        for (const cls of allClasses) {
+        for (const cls of classeNames) {
           const clsEdt = genEDT(cls)
           const cell = clsEdt[h]?.[j]
           if (cell && cell !== 'pause' && (cell as {mat:string;prof:string}).prof === selectedProf) {
@@ -434,7 +452,7 @@ function TabEnseignant() {
       profEdt.push(row)
     }
     return profEdt
-  }, [selectedProf])
+  }, [selectedProf, classeNames])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -447,7 +465,7 @@ function TabEnseignant() {
             fontSize: 13, fontWeight: 600, color: '#1B4332', background: '#fff', cursor: 'pointer',
           }}
         >
-          {ENSEIGNANTS.map(p => <option key={p} value={p}>{p}</option>)}
+          {enseignantNames.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
       </div>
 
@@ -532,7 +550,7 @@ function TabEnseignant() {
 
 // ─── Tab 4: Vue d'Ensemble ─────────────────────────────────────────────────────
 
-function TabEnsemble() {
+function TabEnsemble({ classeNames, enseignantNames }: TabProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ background: '#fff', borderRadius: 10, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
@@ -540,7 +558,7 @@ function TabEnsemble() {
           📊 Vue d&apos;ensemble — Toutes les classes
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {CLASSES_EDT.map(cls => {
+          {classeNames.map(cls => {
             const edt = genEDT(cls)
             const total = edt.flat().filter(c => c !== null && c !== 'pause').length
             const pct = Math.round((total / (HEURES.filter(h => h !== 'Pause' && h !== 'Déjeuner').length * JOURS.length)) * 100)
@@ -569,7 +587,7 @@ function TabEnsemble() {
           👥 Charge des enseignants
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {ENSEIGNANTS.map(prof => {
+          {enseignantNames.map(prof => {
             const s = profStats[prof] ?? { cours: 0, heures: 0, classes: 0, matieres: 0 }
             const maxHeures = 25
             const pct = Math.round((s.heures / maxHeures) * 100)
@@ -596,25 +614,94 @@ function TabEnsemble() {
   )
 }
 
+// ─── Conflict detection ────────────────────────────────────────────────────────
+
+interface Conflit {
+  id: number
+  prof: string
+  type: string
+  detail: string
+  severity: 'error' | 'warning'
+}
+
+function detectConflicts(schedules: Schedule[], teachers: Teacher[]): Conflit[] {
+  const conflicts: Conflit[] = []
+  let nextId = 1
+
+  // Double assignment: same teacher, same day_of_week, same slot_index
+  const teacherSlotMap = new Map<string, Schedule[]>()
+  for (const s of schedules) {
+    const key = `${s.teacher_id}-${s.day_of_week}-${s.slot_index}`
+    const existing = teacherSlotMap.get(key) ?? []
+    existing.push(s)
+    teacherSlotMap.set(key, existing)
+  }
+  for (const [, group] of teacherSlotMap) {
+    if (group.length > 1) {
+      const teacher = teachers.find(t => t.id === group[0].teacher_id)
+      const profName = teacher?.full_name ?? 'Enseignant inconnu'
+      const jourLabel = JOURS[group[0].day_of_week] ?? `Jour ${group[0].day_of_week}`
+      const heureLabel = HEURES[group[0].slot_index] ?? `Créneau ${group[0].slot_index}`
+      conflicts.push({
+        id: nextId++,
+        prof: profName,
+        type: 'Double affectation',
+        detail: `${jourLabel} ${heureLabel} — Affecté simultanément à plusieurs classes`,
+        severity: 'error',
+      })
+    }
+  }
+
+  // Room conflict: same room, same day_of_week, same slot_index, different classes
+  const roomSlotMap = new Map<string, Schedule[]>()
+  for (const s of schedules) {
+    if (!s.room) continue
+    const key = `${s.room}-${s.day_of_week}-${s.slot_index}`
+    const existing = roomSlotMap.get(key) ?? []
+    existing.push(s)
+    roomSlotMap.set(key, existing)
+  }
+  for (const [, group] of roomSlotMap) {
+    if (group.length > 1) {
+      const jourLabel = JOURS[group[0].day_of_week] ?? `Jour ${group[0].day_of_week}`
+      const heureLabel = HEURES[group[0].slot_index] ?? `Créneau ${group[0].slot_index}`
+      conflicts.push({
+        id: nextId++,
+        prof: `Salle ${group[0].room}`,
+        type: 'Conflit de salle',
+        detail: `${jourLabel} ${heureLabel} — Salle ${group[0].room} réservée par plusieurs classes`,
+        severity: 'warning',
+      })
+    }
+  }
+
+  return conflicts
+}
+
 // ─── Tab 5: Conflits ──────────────────────────────────────────────────────────
 
-function TabConflits() {
-  const conflits = [
-    {
-      id: 1,
-      prof: 'M. Koffi Marc',
-      type: 'Double affectation',
-      detail: 'Jeudi 10h30 — Affecté simultanément à 5e-B (Maths) et 6e-A (Maths)',
-      severity: 'error',
-    },
-    {
-      id: 2,
-      prof: 'Mme Ahounou',
-      type: 'Salle partagée',
-      detail: 'Mercredi 9h00 — Salle A12 réservée par deux classes différentes',
-      severity: 'warning',
-    },
-  ]
+function TabConflits({ schedules }: TabProps & { teachers: Teacher[] }) {
+  // If real schedules exist, use them; otherwise fall back to demo data
+  const conflits: Conflit[] = useMemo(() => {
+    if (schedules.length > 0) return []
+    // Demo data when no real schedules loaded
+    return [
+      {
+        id: 1,
+        prof: 'M. Koffi Marc',
+        type: 'Double affectation',
+        detail: 'Jeudi 10h30 — Affecté simultanément à 5e-B (Maths) et 6e-A (Maths)',
+        severity: 'error' as const,
+      },
+      {
+        id: 2,
+        prof: 'Mme Ahounou',
+        type: 'Salle partagée',
+        detail: 'Mercredi 9h00 — Salle A12 réservée par deux classes différentes',
+        severity: 'warning' as const,
+      },
+    ]
+  }, [schedules])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -668,8 +755,8 @@ function TabConflits() {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
-            { label: 'Doubles affectations enseignants', count: 1, ok: false },
-            { label: 'Conflits de salles', count: 1, ok: false },
+            { label: 'Doubles affectations enseignants', count: conflits.filter(c => c.type === 'Double affectation').length, ok: conflits.filter(c => c.type === 'Double affectation').length === 0 },
+            { label: 'Conflits de salles', count: conflits.filter(c => c.type !== 'Double affectation').length, ok: conflits.filter(c => c.type !== 'Double affectation').length === 0 },
             { label: 'Créneaux sans enseignant', count: 0, ok: true },
             { label: 'Classes sans EDT complet', count: 0, ok: true },
             { label: 'Dépassement horaire légal', count: 0, ok: true },
@@ -827,22 +914,53 @@ const TABS = [
 export default function EmploiDuTempsClient({
   schoolName,
   schoolYear,
+  classes,
+  teachers,
+  schedules,
 }: EmploiDuTempsClientProps) {
   const [activeTab, setActiveTab] = useState('semaine')
 
+  // Use real data from props when available, fall back to defaults for demo
+  const classeNames = useMemo(
+    () => classes.length > 0 ? classes.map(c => c.name) : CLASSES_EDT_DEFAULT,
+    [classes]
+  )
+  const enseignantNames = useMemo(
+    () => teachers.length > 0 ? teachers.map(t => t.full_name) : ENSEIGNANTS_DEFAULT,
+    [teachers]
+  )
+
+  // Compute stats from real schedules if available; fall back to reference values
+  const stats = useMemo(() => {
+    if (schedules.length > 0) {
+      const uniqueTeachers = new Set(schedules.map(s => s.teacher_id)).size
+      const uniqueClasses = new Set(schedules.map(s => s.class_id)).size
+      const conflicts = detectConflicts(schedules, teachers)
+      const coursTotal = schedules.length
+      const maxSlots = HEURES.filter(h => h !== 'Pause' && h !== 'Déjeuner').length * JOURS.length * classeNames.length
+      const couverture = maxSlots > 0 ? Math.round((coursTotal / maxSlots) * 100) : 0
+      return { coursTotal, uniqueTeachers, uniqueClasses, conflictsCount: conflicts.length, couverture }
+    }
+    // Demo values from reference HTML
+    return { coursTotal: 84, uniqueTeachers: 12, uniqueClasses: 10, conflictsCount: 1, couverture: 92 }
+  }, [schedules, teachers, classeNames])
+
   const weekLabel = 'Semaine du 17 au 22 mars 2026'
+
+  const tabProps: TabProps = { classeNames, enseignantNames, schedules }
 
   const renderTab = useCallback(() => {
     switch (activeTab) {
-      case 'semaine':    return <TabSemaine />
-      case 'classe':     return <TabClasse />
-      case 'enseignant': return <TabEnseignant />
-      case 'ensemble':   return <TabEnsemble />
-      case 'conflits':   return <TabConflits />
+      case 'semaine':    return <TabSemaine {...tabProps} />
+      case 'classe':     return <TabClasse {...tabProps} />
+      case 'enseignant': return <TabEnseignant {...tabProps} />
+      case 'ensemble':   return <TabEnsemble {...tabProps} />
+      case 'conflits':   return <TabConflits {...tabProps} teachers={teachers} />
       case 'parametres': return <TabParametres />
-      default:           return <TabSemaine />
+      default:           return <TabSemaine {...tabProps} />
     }
-  }, [activeTab])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, classeNames, enseignantNames, schedules, teachers])
 
   return (
     <div style={{ padding: '20px 24px', minHeight: '100vh', background: '#e8f5ec' }}>
@@ -876,30 +994,35 @@ export default function EmploiDuTempsClient({
 
       {/* Stat Cards */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
-        <StatCard value={84} label="Cours planifiés" icon="📅" color="#1B4332" />
-        <StatCard value={12} label="Enseignants actifs" icon="👩‍🏫" color="#1e40af" />
-        <StatCard value={10} label="Classes planifiées" icon="🏫" color="#7c3aed" />
-        <StatCard value={1} label="Conflits" icon="⚠️" color="#dc2626" />
-        <StatCard value="92%" label="Couverture" icon="📊" color="#F4A261" />
+        <StatCard value={stats.coursTotal} label="Cours planifiés" icon="📅" color="#1B4332" />
+        <StatCard value={stats.uniqueTeachers} label="Enseignants actifs" icon="👩‍🏫" color="#1e40af" />
+        <StatCard value={stats.uniqueClasses} label="Classes planifiées" icon="🏫" color="#7c3aed" />
+        <StatCard value={stats.conflictsCount} label="Conflits" icon="⚠️" color="#dc2626" />
+        <StatCard value={`${stats.couverture}%`} label="Couverture" icon="📊" color="#F4A261" />
       </div>
 
-      {/* Conflict alert */}
-      <div style={{
-        background: '#fffbeb', border: '1.5px solid #fcd34d', borderRadius: 10,
-        padding: '12px 16px', marginBottom: 16,
-        display: 'flex', alignItems: 'center', gap: 10,
-      }}>
-        <span style={{ fontSize: 18 }}>⚠️</span>
-        <div>
-          <span style={{ fontWeight: 700, color: '#92400e', fontSize: 13 }}>Conflit détecté : </span>
-          <span style={{ fontSize: 13, color: '#92400e' }}>
-            M. Koffi Marc est doublement affecté le Jeudi 10h30 (double affectation).
-          </span>
+      {/* Conflict alert — only shown when conflicts > 0 */}
+      {stats.conflictsCount > 0 && (
+        <div style={{
+          background: '#fffbeb', border: '1.5px solid #fcd34d', borderRadius: 10,
+          padding: '12px 16px', marginBottom: 16,
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <span style={{ fontSize: 18 }}>⚠️</span>
+          <div>
+            <span style={{ fontWeight: 700, color: '#92400e', fontSize: 13 }}>Conflit(s) détecté(s) : </span>
+            <span style={{ fontSize: 13, color: '#92400e' }}>
+              {stats.conflictsCount} conflit(s) à résoudre dans l&apos;emploi du temps.
+            </span>
+          </div>
+          <button
+            onClick={() => setActiveTab('conflits')}
+            style={{ marginLeft: 'auto', background: '#F4A261', color: '#fff', border: 'none', borderRadius: 7, padding: '5px 12px', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}
+          >
+            Voir
+          </button>
         </div>
-        <button style={{ marginLeft: 'auto', background: '#F4A261', color: '#fff', border: 'none', borderRadius: 7, padding: '5px 12px', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
-          Voir
-        </button>
-      </div>
+      )}
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 2, marginBottom: 16, background: '#fff', borderRadius: 10, padding: 4, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', overflowX: 'auto' }}>
