@@ -114,8 +114,8 @@ function KpiCard({
 }) {
   return (
     <div style={{
-      background: '#fff', border: '1px solid #d1fae5', borderRadius: 12,
-      padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 6,
+      background: '#fff', border: '1px solid #d1fae5', borderRadius: 10,
+      padding: '13px 15px', display: 'flex', flexDirection: 'column', gap: 6,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{
@@ -388,9 +388,9 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
   // ── Style helpers ─────────────────────────────────────────────────────────────
   const tabStyle = (t: typeof activeTab): React.CSSProperties => ({
     display: 'inline-flex', alignItems: 'center', gap: 5,
-    padding: isMobile ? '6px 10px' : '7px 14px',
-    borderRadius: 999,
-    fontSize: isMobile ? 11 : 12,
+    padding: '7px 16px',
+    borderRadius: 8,
+    fontSize: 12,
     fontWeight: 600, cursor: 'pointer',
     border: activeTab === t ? '1px solid #d1fae5' : '1px solid transparent',
     background: activeTab === t ? '#fff' : 'transparent',
@@ -417,13 +417,13 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
 
   const btnPrimary: React.CSSProperties = {
     display: 'inline-flex', alignItems: 'center', gap: 5,
-    padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+    padding: '7px 13px', borderRadius: 7, fontSize: 12, fontWeight: 600,
     background: '#1B4332', color: '#fff', border: 'none', cursor: 'pointer',
   }
 
   const btnOutline: React.CSSProperties = {
     display: 'inline-flex', alignItems: 'center', gap: 5,
-    padding: '6px 11px', borderRadius: 8, fontSize: 11, fontWeight: 500,
+    padding: '7px 13px', borderRadius: 7, fontSize: 12, fontWeight: 500,
     background: 'transparent', color: '#6b7280', border: '1px solid #e5e7eb', cursor: 'pointer',
   }
 
@@ -442,7 +442,7 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ fontFamily: "'Source Sans 3', sans-serif", color: '#0d1f16', paddingBottom: 40, overflowX: 'hidden' }}>
+    <div style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 13, color: '#0d1f16', paddingBottom: isMobile ? 80 : 40, overflowX: 'hidden' }}>
 
       {/* ── Header ── */}
       <div style={{
@@ -453,7 +453,7 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
         <div>
           <h1 style={{
             fontFamily: "'Playfair Display', serif",
-            fontSize: isMobile ? 20 : 24, fontWeight: 700, color: '#1B4332', margin: 0,
+            fontSize: isMobile ? 18 : 22, fontWeight: 700, color: '#1B4332', margin: 0,
           }}>
             💰 Finances
           </h1>
@@ -465,8 +465,8 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
 
       {/* ── Tabs ── */}
       <div style={{
-        display: 'flex', gap: 4, padding: isMobile ? '4px 6px' : '6px 8px',
-        background: '#f0faf3', borderRadius: 12, border: '1px solid #d1fae5',
+        display: 'flex', gap: 2, padding: '4px',
+        background: '#f0faf3', borderRadius: 11, border: '1px solid #d1fae5',
         marginBottom: 20, flexWrap: 'wrap',
       }}>
         {([
@@ -491,7 +491,7 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
           <div style={{
             display: 'grid',
             gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(5, 1fr)',
-            gap: 12, marginBottom: 20,
+            gap: 10, marginBottom: 18,
           }}>
             <KpiCard
               icon="💵" label="Total collecté" bg="#D8F3DC" color="#1B4332"
@@ -527,7 +527,7 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
           <div style={{
             display: 'grid',
             gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-            gap: 14, marginBottom: 20,
+            gap: 14, marginBottom: 14,
           }}>
             {/* Graphique tendance */}
             <div style={{ background: '#fff', border: '1px solid #d1fae5', borderRadius: 12, padding: 16 }}>
@@ -780,7 +780,7 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
           <div style={{
             display: 'grid',
             gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)',
-            gap: 12, marginBottom: 20,
+            gap: 10, marginBottom: 18,
           }}>
             <KpiCard icon="👥" label="Masse salariale" bg="#fef3c7" color="#d97706"
               value={fmtShort(masseSalariale)} sub={fmt(masseSalariale)} />
@@ -841,7 +841,7 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
           <div style={{
             display: 'grid',
             gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
-            gap: 12, marginBottom: 20,
+            gap: 10, marginBottom: 18,
           }}>
             <KpiCard icon="📋" label="Recettes prévues" bg="#dbeafe" color="#1e40af"
               value={fmtShort(totalRevenuPrevu)} sub={fmt(totalRevenuPrevu)} />
@@ -924,8 +924,8 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
             <div>
               {reçus.map(p => (
                 <div key={p.id} style={{
-                  background: '#fff', border: '1px solid #d1fae5', borderRadius: 10,
-                  padding: 12, marginBottom: 10,
+                  background: '#fff', border: '1px solid #d1fae5', borderRadius: 12,
+                  padding: 14, marginBottom: 10,
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                     <div style={{
@@ -937,10 +937,10 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
                       🧾
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: '#0d1f16', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#0d1f16', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {p.students ? `${p.students.first_name} ${p.students.last_name}` : '—'}
                       </div>
-                      <div style={{ fontSize: 10, color: '#6b7280' }}>
+                      <div style={{ fontSize: 11, color: '#6b7280' }}>
                         {p.students?.classes?.name ?? '—'} · Trimestre {p.term ?? 1}
                       </div>
                     </div>
@@ -1097,7 +1097,11 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
          ══════════════════════════════════════════════════════════════ */}
       {toastMsg && (
         <div style={{
-          position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
+          position: 'fixed',
+          ...(isMobile
+            ? { bottom: 80, left: 24, right: 24 }
+            : { bottom: 24, right: 24 }),
+          zIndex: 9999,
           background: '#1B4332', color: '#fff',
           fontSize: 12, fontWeight: 500,
           padding: '10px 16px', borderRadius: 10,
@@ -1122,7 +1126,7 @@ function Modal({ children, onClose, title, isMobile = false }: { children: React
       padding: 16,
     }} onClick={onClose}>
       <div style={{
-        background: '#fff', borderRadius: 14, padding: 22,
+        background: '#fff', borderRadius: 14, padding: isMobile ? 16 : 20,
         width: isMobile ? '95vw' : '480px',
         maxHeight: '90vh', overflowY: 'auto',
         boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
@@ -1172,8 +1176,8 @@ function StaffSection({
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                 <Avatar name={m.full_name} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#0d1f16' }}>{m.full_name}</div>
-                  <div style={{ fontSize: 10, color: '#6b7280' }}>{getRoleLabel(m.role)}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#0d1f16' }}>{m.full_name}</div>
+                  <div style={{ fontSize: 11, color: '#6b7280' }}>{getRoleLabel(m.role)}</div>
                 </div>
                 <span style={{
                   background: m.salary_paid ? '#D8F3DC' : '#fef3c7',
