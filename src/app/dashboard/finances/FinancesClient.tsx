@@ -442,7 +442,7 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ fontFamily: "'Source Sans 3', sans-serif", color: '#0d1f16', paddingBottom: 40 }}>
+    <div style={{ fontFamily: "'Source Sans 3', sans-serif", color: '#0d1f16', paddingBottom: 40, overflowX: 'hidden' }}>
 
       {/* ── Header ── */}
       <div style={{
