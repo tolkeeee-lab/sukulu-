@@ -83,7 +83,7 @@ const profStats: Record<string, { cours: number; heures: number; classes: number
   'M. Houngnibo': { cours: 14, heures: 12, classes: 2, matieres: 3 },
 }
 
-// ─── EDT Data Generator ───────────────────────────────────────────────────────
+// ─── EDT Data Generator (demo fallback) ──────────────────────────────────────
 
 function genEDT(classe: string): Array<Array<{mat: string; prof: string} | 'pause' | null>> {
   const mats_p = ['Maths','Français','EST','SVT','Éveil','Langue Nat.','EPS','Dessin']
@@ -106,6 +106,66 @@ function genEDT(classe: string): Array<Array<{mat: string; prof: string} | 'paus
       const matIdx = (h + j + classe.charCodeAt(0)) % mats.length
       const prof = isPrim ? (profPrim[classe] || 'M. Agossou') : profs_c[(h + j) % 4]
       row.push({ mat: mats[matIdx], prof })
+    }
+    edt.push(row)
+  }
+  return edt
+}
+
+// ─── Real EDT builders ────────────────────────────────────────────────────────
+
+type RealClassCell = { id: string; mat: string; prof: string; teacherId: string; room: string | null }
+type RealTeacherCell = { id: string; mat: string; classeName: string; room: string | null }
+
+function buildEdtForClass(
+  classId: string,
+  schedules: Schedule[],
+  teachers: Teacher[],
+): Array<Array<RealClassCell | 'pause' | null>> {
+  const edt: Array<Array<RealClassCell | 'pause' | null>> = []
+  for (let h = 0; h < HEURES.length; h++) {
+    const row: Array<RealClassCell | 'pause' | null> = []
+    for (let j = 0; j < JOURS.length; j++) {
+      if (HEURES[h] === 'Pause' || HEURES[h] === 'Déjeuner') { row.push('pause'); continue }
+      const s = schedules.find(s => s.class_id === classId && s.day_of_week === j && s.slot_index === h)
+      if (s) {
+        row.push({
+          id: s.id,
+          mat: s.subject,
+          prof: teachers.find(t => t.id === s.teacher_id)?.full_name ?? '—',
+          teacherId: s.teacher_id,
+          room: s.room,
+        })
+      } else {
+        row.push(null)
+      }
+    }
+    edt.push(row)
+  }
+  return edt
+}
+
+function buildEdtForTeacher(
+  teacherId: string,
+  schedules: Schedule[],
+  classes: Classe[],
+): Array<Array<RealTeacherCell | 'pause' | null>> {
+  const edt: Array<Array<RealTeacherCell | 'pause' | null>> = []
+  for (let h = 0; h < HEURES.length; h++) {
+    const row: Array<RealTeacherCell | 'pause' | null> = []
+    for (let j = 0; j < JOURS.length; j++) {
+      if (HEURES[h] === 'Pause' || HEURES[h] === 'Déjeuner') { row.push('pause'); continue }
+      const s = schedules.find(s => s.teacher_id === teacherId && s.day_of_week === j && s.slot_index === h)
+      if (s) {
+        row.push({
+          id: s.id,
+          mat: s.subject,
+          classeName: classes.find(c => c.id === s.class_id)?.name ?? '—',
+          room: s.room,
+        })
+      } else {
+        row.push(null)
+      }
     }
     edt.push(row)
   }
@@ -137,13 +197,52 @@ function StatCard({ value, label, icon, color }: { value: string | number; label
   )
 }
 
-interface EdtGridProps {
-  classe: string
-  showTodayHighlight?: boolean
+// ─── Toast ────────────────────────────────────────────────────────────────────
+
+function Toast({ message, onClose }: { message: string; onClose: () => void }) {
+  return (
+    <div style={{
+      position: 'fixed', bottom: 28, right: 28,
+      background: '#1B4332', color: '#fff',
+      padding: '12px 20px', borderRadius: 10,
+      fontSize: 13, fontWeight: 600,
+      boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
+      display: 'flex', alignItems: 'center', gap: 10, zIndex: 9999,
+    }}>
+      ✅ {message}
+      <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#D8F3DC', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}>✕</button>
+    </div>
+  )
 }
 
-function EdtGrid({ classe, showTodayHighlight = true }: EdtGridProps) {
-  const edt = useMemo(() => genEDT(classe), [classe])
+interface EdtGridProps {
+  classe: string                  // name used for demo fallback + display
+  classId: string                 // real FK id for data lookup
+  schedules: Schedule[]           // localSchedules
+  teachers: Teacher[]
+  showTodayHighlight?: boolean
+  isDemoMode: boolean             // true when there are no real schedules globally
+  onAddCourse?: (dayOfWeek: number, slotIndex: number) => void
+  onDeleteCourse?: (schedule: Schedule) => void
+}
+
+function EdtGrid({
+  classe, classId, schedules, teachers,
+  showTodayHighlight = true, isDemoMode,
+  onAddCourse, onDeleteCourse,
+}: EdtGridProps) {
+  // Build grid: demo data when no real schedules exist, real data otherwise
+  const edt = useMemo<Array<Array<{ id: string; mat: string; prof: string; teacherId: string; room: string | null } | 'pause' | null>>>(() => {
+    if (isDemoMode) {
+      const demo = genEDT(classe)
+      return demo.map(row => row.map(cell => {
+        if (cell === null || cell === 'pause') return cell as 'pause' | null
+        return { id: '', mat: cell.mat, prof: cell.prof, teacherId: '', room: null }
+      }))
+    }
+    return buildEdtForClass(classId, schedules, teachers)
+  }, [classe, classId, schedules, teachers, isDemoMode])
+
   const [hoveredCell, setHoveredCell] = useState<string | null>(null)
 
   const coursCount = useMemo(() => {
@@ -155,8 +254,26 @@ function EdtGrid({ classe, showTodayHighlight = true }: EdtGridProps) {
     })
   }, [edt])
 
+  // Check if this class has any courses in real mode
+  const hasAnyCourse = isDemoMode || edt.some(row => row.some(c => c !== null && c !== 'pause'))
+
   return (
     <div style={{ overflowX: 'auto' }}>
+      {isDemoMode && (
+        <div style={{
+          background: '#fffbeb', border: '1.5px solid #fcd34d', borderRadius: 8,
+          padding: '8px 14px', marginBottom: 10, fontSize: 12, color: '#92400e', display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          🎭 <strong>Mode démo</strong> — aucun cours planifié. Les données affichées sont des exemples.
+        </div>
+      )}
+      {!isDemoMode && !hasAnyCourse && (
+        <div style={{
+          textAlign: 'center', padding: '32px 0', color: '#6b7280', fontSize: 13,
+        }}>
+          Aucun cours planifié — cliquez sur <strong>+</strong> pour ajouter
+        </div>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: '70px repeat(6, 1fr)', minWidth: 700 }}>
         {/* Corner */}
         <div style={{ background: '#f0faf3', border: '1px solid #e5e7eb', padding: '8px 4px', fontSize: 11, color: '#9ca3af', textAlign: 'center', fontFamily: "'JetBrains Mono', monospace" }}>Heure</div>
@@ -218,14 +335,21 @@ function EdtGrid({ classe, showTodayHighlight = true }: EdtGridProps) {
               if (!cell) {
                 return (
                   <div key={cellKey} style={{
-                    background: hoveredCell === cellKey ? '#f9fafb' : 'transparent',
+                    background: hoveredCell === cellKey ? '#f0fdf4' : 'transparent',
                     border: '1px solid #e5e7eb',
-                    cursor: 'pointer',
+                    cursor: onAddCourse ? 'pointer' : 'default',
                     transition: 'background 0.15s',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    minHeight: 36,
                   }}
                     onMouseEnter={() => setHoveredCell(cellKey)}
                     onMouseLeave={() => setHoveredCell(null)}
-                  />
+                    onClick={() => onAddCourse?.(j, h)}
+                  >
+                    {hoveredCell === cellKey && onAddCourse && (
+                      <span style={{ fontSize: 16, color: '#1B4332', opacity: 0.5, fontWeight: 700 }}>+</span>
+                    )}
+                  </div>
                 )
               }
               const c = getCellColor(cell.mat)
@@ -233,12 +357,19 @@ function EdtGrid({ classe, showTodayHighlight = true }: EdtGridProps) {
                 <div key={cellKey}
                   onMouseEnter={() => setHoveredCell(cellKey)}
                   onMouseLeave={() => setHoveredCell(null)}
+                  onClick={() => {
+                    if (!isDemoMode && cell.id && onDeleteCourse) {
+                      // find the original schedule from the schedules prop
+                      const s = schedules.find(sc => sc.id === cell.id)
+                      if (s) onDeleteCourse(s)
+                    }
+                  }}
                   style={{
                     background: c.bg,
                     border: `1px solid #e5e7eb`,
                     borderLeft: `3px solid ${c.border}`,
                     padding: '4px 6px',
-                    cursor: 'pointer',
+                    cursor: !isDemoMode && cell.id ? 'pointer' : 'default',
                     position: 'relative',
                     transition: 'opacity 0.15s',
                     opacity: hoveredCell === cellKey ? 0.85 : 1,
@@ -246,7 +377,8 @@ function EdtGrid({ classe, showTodayHighlight = true }: EdtGridProps) {
                 >
                   <div style={{ fontSize: 11, fontWeight: 600, color: c.color }}>{cell.mat}</div>
                   <div style={{ fontSize: 10, color: '#6b7280', marginTop: 1 }}>{cell.prof}</div>
-                  {hoveredCell === cellKey && (
+                  {cell.room && <div style={{ fontSize: 9, color: '#9ca3af', marginTop: 1 }}>📍 {cell.room}</div>}
+                  {hoveredCell === cellKey && !isDemoMode && cell.id && (
                     <span style={{
                       position: 'absolute', top: 2, right: 4,
                       fontSize: 10, color: c.color, opacity: 0.7,
@@ -284,29 +416,24 @@ function EdtGrid({ classe, showTodayHighlight = true }: EdtGridProps) {
 interface TabProps {
   classeNames: string[]
   enseignantNames: string[]
-  schedules: Schedule[]
+  schedules: Schedule[]      // localSchedules
   teachers: Teacher[]
+  classes: Classe[]
+  isDemoMode: boolean
+  onAddCourse: (opts?: { classId?: string; dayOfWeek?: number; slotIndex?: number }) => void
+  onDeleteCourse: (schedule: Schedule) => void
 }
 
 // ─── Tab 1: Vue Semaine ────────────────────────────────────────────────────────
 
-function TabSemaine({ classeNames }: TabProps) {
+function TabSemaine({ classeNames, schedules, teachers, classes, isDemoMode, onAddCourse, onDeleteCourse }: TabProps) {
   const [selectedClasse, setSelectedClasse] = useState(classeNames[0] ?? '')
   const [semaineIdx, setSemaineIdx] = useState(1)
 
-  const edt = useMemo(() => genEDT(selectedClasse), [selectedClasse])
-
-  const mainProf = useMemo(() => {
-    const isPrim = !selectedClasse.startsWith('6') && !selectedClasse.startsWith('5') &&
-      !selectedClasse.startsWith('4') && !selectedClasse.startsWith('3')
-    if (isPrim) {
-      const profPrim: Record<string,string> = {
-        'CM2-A':'M. Agossou','CM2-B':'Mme Tossou','CM1-A':'M. Dossou','3e-B':'M. Tchékpo',
-      }
-      return profPrim[selectedClasse] ?? 'M. Agossou'
-    }
-    return ''
-  }, [selectedClasse])
+  const selectedClassId = useMemo(
+    () => classes.find(c => c.name === selectedClasse)?.id ?? '',
+    [classes, selectedClasse]
+  )
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -361,10 +488,13 @@ function TabSemaine({ classeNames }: TabProps) {
       <div style={{ background: '#fff', borderRadius: 10, padding: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 700, color: '#1B4332' }}>
-            🗓️ EDT — {selectedClasse}{mainProf ? ` · ${mainProf}` : ''}
+            🗓️ EDT — {selectedClasse}
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
-            <button style={{ background: '#1B4332', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 12, cursor: 'pointer' }}>
+            <button
+              onClick={() => onAddCourse({ classId: selectedClassId })}
+              style={{ background: '#1B4332', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 12, cursor: 'pointer' }}
+            >
               + Cours
             </button>
             <button style={{ background: '#fff', color: '#1B4332', border: '1.5px solid #d1fae5', borderRadius: 7, padding: '6px 12px', fontSize: 12, cursor: 'pointer' }}>
@@ -375,7 +505,16 @@ function TabSemaine({ classeNames }: TabProps) {
             </button>
           </div>
         </div>
-        <EdtGrid classe={selectedClasse} showTodayHighlight />
+        <EdtGrid
+          classe={selectedClasse}
+          classId={selectedClassId}
+          schedules={schedules}
+          teachers={teachers}
+          showTodayHighlight
+          isDemoMode={isDemoMode}
+          onAddCourse={(day, slot) => onAddCourse({ classId: selectedClassId, dayOfWeek: day, slotIndex: slot })}
+          onDeleteCourse={onDeleteCourse}
+        />
       </div>
     </div>
   )
@@ -383,8 +522,13 @@ function TabSemaine({ classeNames }: TabProps) {
 
 // ─── Tab 2: Par Classe ─────────────────────────────────────────────────────────
 
-function TabClasse({ classeNames }: TabProps) {
+function TabClasse({ classeNames, schedules, teachers, classes, isDemoMode, onAddCourse, onDeleteCourse }: TabProps) {
   const [selectedClasse, setSelectedClasse] = useState(classeNames[0] ?? '')
+
+  const selectedClassId = useMemo(
+    () => classes.find(c => c.name === selectedClasse)?.id ?? '',
+    [classes, selectedClasse]
+  )
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -402,7 +546,10 @@ function TabClasse({ classeNames }: TabProps) {
         <button style={{ background: '#1B4332', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12, cursor: 'pointer' }}>
           Exporter
         </button>
-        <button style={{ background: '#F4A261', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12, cursor: 'pointer' }}>
+        <button
+          onClick={() => onAddCourse({ classId: selectedClassId })}
+          style={{ background: '#F4A261', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12, cursor: 'pointer' }}
+        >
           + Cours
         </button>
       </div>
@@ -410,7 +557,16 @@ function TabClasse({ classeNames }: TabProps) {
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 700, color: '#1B4332', marginBottom: 12 }}>
           📚 Emploi du Temps — {selectedClasse}
         </div>
-        <EdtGrid classe={selectedClasse} showTodayHighlight={false} />
+        <EdtGrid
+          classe={selectedClasse}
+          classId={selectedClassId}
+          schedules={schedules}
+          teachers={teachers}
+          showTodayHighlight={false}
+          isDemoMode={isDemoMode}
+          onAddCourse={(day, slot) => onAddCourse({ classId: selectedClassId, dayOfWeek: day, slotIndex: slot })}
+          onDeleteCourse={onDeleteCourse}
+        />
       </div>
     </div>
   )
@@ -418,37 +574,45 @@ function TabClasse({ classeNames }: TabProps) {
 
 // ─── Tab 3: Par Enseignant ─────────────────────────────────────────────────────
 
-function TabEnseignant({ classeNames, enseignantNames, schedules, teachers }: TabProps) {
+function TabEnseignant({ enseignantNames, schedules, teachers, classes, isDemoMode }: TabProps) {
   const [selectedProf, setSelectedProf] = useState(enseignantNames[0] ?? '')
+
+  const selectedTeacher = useMemo(
+    () => teachers.find(t => t.full_name === selectedProf) ?? null,
+    [teachers, selectedProf]
+  )
 
   // Compute stats from real schedule data when available
   const stats = useMemo(() => {
-    const teacher = teachers.find(t => t.full_name === selectedProf)
-    if (teacher && schedules.length > 0) {
-      const profSchedules = schedules.filter(s => s.teacher_id === teacher.id)
+    if (!isDemoMode && selectedTeacher) {
+      const profSchedules = schedules.filter(s => s.teacher_id === selectedTeacher.id)
       const uniqueClasses = new Set(profSchedules.map(s => s.class_id)).size
       const uniqueMatieres = new Set(profSchedules.map(s => s.subject)).size
-      // slot_index counts excluding pause slots (3 and 7) × 45min ≈ hours
       const coursCount = profSchedules.length
-      const heures = Math.round(coursCount * 0.75) // ~45min per slot
+      const heures = Math.round(coursCount * 0.75)
       return { cours: coursCount, heures, classes: uniqueClasses, matieres: uniqueMatieres }
     }
-    // Fall back to hardcoded demo stats for demo teachers
     return profStats[selectedProf] ?? { cours: 0, heures: 0, classes: 0, matieres: 0 }
-  }, [selectedProf, schedules, teachers])
+  }, [selectedProf, schedules, selectedTeacher, isDemoMode])
 
-  const edt = useMemo(() => {
-    const profEdt: Array<Array<{mat: string; classe: string} | 'pause' | null>> = []
+  // Build teacher EDT grid
+  const edt = useMemo<Array<Array<RealTeacherCell | 'pause' | null>>>(() => {
+    if (!isDemoMode && selectedTeacher) {
+      return buildEdtForTeacher(selectedTeacher.id, schedules, classes)
+    }
+    // Demo fallback: scan genEDT for all classes to find courses for the selected prof name
+    const profEdt: Array<Array<RealTeacherCell | 'pause' | null>> = []
+    const demoClassNames = classes.length > 0 ? classes.map(c => c.name) : CLASSES_EDT_DEFAULT
     for (let h = 0; h < HEURES.length; h++) {
-      const row: Array<{mat: string; classe: string} | 'pause' | null> = []
+      const row: Array<RealTeacherCell | 'pause' | null> = []
       for (let j = 0; j < JOURS.length; j++) {
         if (HEURES[h] === 'Pause' || HEURES[h] === 'Déjeuner') { row.push('pause'); continue }
-        let found: {mat: string; classe: string} | null = null
-        for (const cls of classeNames) {
+        let found: RealTeacherCell | null = null
+        for (const cls of demoClassNames) {
           const clsEdt = genEDT(cls)
           const cell = clsEdt[h]?.[j]
-          if (cell && cell !== 'pause' && (cell as {mat:string;prof:string}).prof === selectedProf) {
-            found = { mat: (cell as {mat:string;prof:string}).mat, classe: cls }
+          if (cell && cell !== 'pause' && (cell as { mat: string; prof: string }).prof === selectedProf) {
+            found = { id: '', mat: (cell as { mat: string; prof: string }).mat, classeName: cls, room: null }
             break
           }
         }
@@ -457,7 +621,7 @@ function TabEnseignant({ classeNames, enseignantNames, schedules, teachers }: Ta
       profEdt.push(row)
     }
     return profEdt
-  }, [selectedProf, classeNames])
+  }, [selectedProf, schedules, selectedTeacher, classes, isDemoMode])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -487,6 +651,14 @@ function TabEnseignant({ classeNames, enseignantNames, schedules, teachers }: Ta
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 700, color: '#1B4332', marginBottom: 12 }}>
           👤 Emploi du Temps — {selectedProf}
         </div>
+        {isDemoMode && (
+          <div style={{
+            background: '#fffbeb', border: '1.5px solid #fcd34d', borderRadius: 8,
+            padding: '8px 14px', marginBottom: 10, fontSize: 12, color: '#92400e', display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            🎭 <strong>Mode démo</strong> — aucun cours planifié.
+          </div>
+        )}
         <div style={{ overflowX: 'auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '70px repeat(6, 1fr)', minWidth: 700 }}>
             <div style={{ background: '#f0faf3', border: '1px solid #e5e7eb', padding: '8px 4px', fontSize: 11, color: '#9ca3af', textAlign: 'center', fontFamily: "'JetBrains Mono', monospace" }}>Heure</div>
@@ -527,20 +699,17 @@ function TabEnseignant({ classeNames, enseignantNames, schedules, teachers }: Ta
                     )
                   }
                   if (!cell) {
-                    return <div key={`${h}-${j}`} style={{ border: '1px solid #e5e7eb' }} />
+                    return <div key={`${h}-${j}`} style={{ border: '1px solid #e5e7eb', minHeight: 36 }} />
                   }
-                  const c = getCellColor((cell as {mat:string;classe:string}).mat)
+                  const c = getCellColor(cell.mat)
                   return (
                     <div key={`${h}-${j}`} style={{
                       background: c.bg, border: `1px solid #e5e7eb`,
                       borderLeft: `3px solid ${c.border}`, padding: '4px 6px', cursor: 'pointer',
                     }}>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: c.color }}>
-                        {(cell as {mat:string;classe:string}).mat}
-                      </div>
-                      <div style={{ fontSize: 10, color: '#6b7280', marginTop: 1 }}>
-                        {(cell as {mat:string;classe:string}).classe}
-                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: c.color }}>{cell.mat}</div>
+                      <div style={{ fontSize: 10, color: '#6b7280', marginTop: 1 }}>{cell.classeName}</div>
+                      {cell.room && <div style={{ fontSize: 9, color: '#9ca3af', marginTop: 1 }}>📍 {cell.room}</div>}
                     </div>
                   )
                 })}
@@ -555,7 +724,9 @@ function TabEnseignant({ classeNames, enseignantNames, schedules, teachers }: Ta
 
 // ─── Tab 4: Vue d'Ensemble ─────────────────────────────────────────────────────
 
-function TabEnsemble({ classeNames, enseignantNames }: TabProps) {
+function TabEnsemble({ classeNames, enseignantNames, schedules, teachers, classes, isDemoMode }: TabProps) {
+  const maxSlots = HEURES.filter(h => h !== 'Pause' && h !== 'Déjeuner').length * JOURS.length
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ background: '#fff', borderRadius: 10, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
@@ -563,17 +734,23 @@ function TabEnsemble({ classeNames, enseignantNames }: TabProps) {
           📊 Vue d&apos;ensemble — Toutes les classes
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {classeNames.map(cls => {
-            const edt = genEDT(cls)
-            const total = edt.flat().filter(c => c !== null && c !== 'pause').length
-            const pct = Math.round((total / (HEURES.filter(h => h !== 'Pause' && h !== 'Déjeuner').length * JOURS.length)) * 100)
+          {classeNames.map(clsName => {
+            let total: number
+            if (isDemoMode) {
+              const edt = genEDT(clsName)
+              total = edt.flat().filter(c => c !== null && c !== 'pause').length
+            } else {
+              const cls = classes.find(c => c.name === clsName)
+              total = cls ? schedules.filter(s => s.class_id === cls.id).length : 0
+            }
+            const pct = maxSlots > 0 ? Math.round((total / maxSlots) * 100) : 0
             return (
-              <div key={cls} style={{
+              <div key={clsName} style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '10px 14px', borderRadius: 8,
                 background: '#f9fafb', border: '1px solid #e5e7eb',
               }}>
-                <div style={{ width: 60, fontWeight: 700, color: '#1B4332', fontSize: 13 }}>{cls}</div>
+                <div style={{ width: 60, fontWeight: 700, color: '#1B4332', fontSize: 13 }}>{clsName}</div>
                 <div style={{ flex: 1, height: 8, background: '#e5e7eb', borderRadius: 4, overflow: 'hidden' }}>
                   <div style={{ width: `${pct}%`, height: '100%', background: '#1B4332', borderRadius: 4 }} />
                 </div>
@@ -592,24 +769,35 @@ function TabEnsemble({ classeNames, enseignantNames }: TabProps) {
           👥 Charge des enseignants
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {enseignantNames.map(prof => {
-            const s = profStats[prof] ?? { cours: 0, heures: 0, classes: 0, matieres: 0 }
+          {enseignantNames.map(profName => {
+            let heures: number
+            let classesCount: number
+            if (isDemoMode) {
+              const s = profStats[profName] ?? { cours: 0, heures: 0, classes: 0, matieres: 0 }
+              heures = s.heures
+              classesCount = s.classes
+            } else {
+              const teacher = teachers.find(t => t.full_name === profName)
+              const profSchedules = teacher ? schedules.filter(s => s.teacher_id === teacher.id) : []
+              heures = Math.round(profSchedules.length * 0.75)
+              classesCount = new Set(profSchedules.map(s => s.class_id)).size
+            }
             const maxHeures = 25
-            const pct = Math.round((s.heures / maxHeures) * 100)
+            const pct = maxHeures > 0 ? Math.round((heures / maxHeures) * 100) : 0
             return (
-              <div key={prof} style={{
+              <div key={profName} style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '10px 14px', borderRadius: 8,
                 background: '#f9fafb', border: '1px solid #e5e7eb',
               }}>
-                <div style={{ width: 100, fontWeight: 600, color: '#374151', fontSize: 12 }}>{prof}</div>
+                <div style={{ width: 100, fontWeight: 600, color: '#374151', fontSize: 12 }}>{profName}</div>
                 <div style={{ flex: 1, height: 8, background: '#e5e7eb', borderRadius: 4, overflow: 'hidden' }}>
                   <div style={{ width: `${pct}%`, height: '100%', background: pct > 90 ? '#dc2626' : pct > 70 ? '#F4A261' : '#40916C', borderRadius: 4 }} />
                 </div>
                 <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 600, color: '#374151', width: 30 }}>
-                  {s.heures}h
+                  {heures}h
                 </div>
-                <div style={{ fontSize: 11, color: '#6b7280', width: 80 }}>{s.classes} classe(s)</div>
+                <div style={{ fontSize: 11, color: '#6b7280', width: 80 }}>{classesCount} classe(s)</div>
               </div>
             )
           })}
@@ -916,16 +1104,164 @@ const TABS = [
   { id: 'parametres', label: '⚙️ Paramètres' },
 ]
 
+// Slot indices that are NOT pause/lunch (usable for scheduling)
+const VALID_SLOTS = HEURES
+  .map((h, i) => ({ h, i }))
+  .filter(({ h }) => h !== 'Pause' && h !== 'Déjeuner')
+
+interface AddCourseModalState {
+  open: boolean
+  classId?: string
+  dayOfWeek?: number
+  slotIndex?: number
+}
+
+interface DeleteCourseModalState {
+  open: boolean
+  schedule?: Schedule & { profName?: string; classeName?: string }
+}
+
 export default function EmploiDuTempsClient({
+  schoolId,
   schoolName,
   schoolYear,
   classes,
   teachers,
-  schedules,
+  schedules: initialSchedules,
 }: EmploiDuTempsClientProps) {
   const [activeTab, setActiveTab] = useState('semaine')
 
-  // Use real data from props when available, fall back to defaults for demo
+  // ── Local schedules state ──
+  const [localSchedules, setLocalSchedules] = useState<Schedule[]>(initialSchedules)
+
+  // ── Toast ──
+  const [toast, setToast] = useState<string | null>(null)
+  const showToast = useCallback((msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(null), 3000)
+  }, [])
+
+  // ── Add Course modal state ──
+  const [addModal, setAddModal] = useState<AddCourseModalState>({ open: false })
+  const [addForm, setAddForm] = useState({
+    subject: '', classId: '', teacherId: '', dayOfWeek: '0', slotIndex: '0', room: '',
+  })
+  const [addLoading, setAddLoading] = useState(false)
+
+  const openAddModal = useCallback((opts?: { classId?: string; dayOfWeek?: number; slotIndex?: number }) => {
+    const firstValidSlot = VALID_SLOTS[0]?.i ?? 0
+    setAddForm({
+      subject: '',
+      classId: opts?.classId ?? (classes[0]?.id ?? ''),
+      teacherId: teachers[0]?.id ?? '',
+      dayOfWeek: String(opts?.dayOfWeek ?? 0),
+      slotIndex: String(opts?.slotIndex ?? firstValidSlot),
+      room: '',
+    })
+    setAddModal({ open: true, ...opts })
+  }, [classes, teachers])
+
+  const handleAddCourse = useCallback(async () => {
+    if (!addForm.subject.trim() || !addForm.classId || !addForm.teacherId) return
+    setAddLoading(true)
+    // Optimistic update
+    const optimisticId = `optimistic-${Date.now()}`
+    const optimistic: Schedule = {
+      id: optimisticId,
+      school_id: schoolId,
+      class_id: addForm.classId,
+      teacher_id: addForm.teacherId,
+      subject: addForm.subject.trim(),
+      day_of_week: Number(addForm.dayOfWeek),
+      slot_index: Number(addForm.slotIndex),
+      room: addForm.room.trim() || null,
+      recurrence: 'weekly',
+      school_year: schoolYear,
+    }
+    setLocalSchedules(prev => [...prev, optimistic])
+    setAddModal({ open: false })
+    try {
+      const res = await fetch('/api/schedules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          class_id: addForm.classId,
+          teacher_id: addForm.teacherId,
+          subject: addForm.subject.trim(),
+          day_of_week: Number(addForm.dayOfWeek),
+          slot_index: Number(addForm.slotIndex),
+          room: addForm.room.trim() || null,
+          recurrence: 'weekly',
+          school_year: schoolYear,
+        }),
+      })
+      const data = await res.json() as { schedule?: Schedule; error?: string }
+      if (!res.ok) throw new Error(data.error ?? 'Erreur')
+      // Replace optimistic with real
+      setLocalSchedules(prev => prev.map(s => s.id === optimisticId ? data.schedule! : s))
+      showToast('Cours ajouté ✓')
+    } catch (err) {
+      // Rollback
+      setLocalSchedules(prev => prev.filter(s => s.id !== optimisticId))
+      const msg = err instanceof Error ? err.message : 'Veuillez réessayer.'
+      showToast(`Erreur lors de l'ajout du cours — ${msg}`)
+    } finally {
+      setAddLoading(false)
+    }
+  }, [addForm, schoolId, schoolYear, showToast])
+
+  // ── Delete Course modal state ──
+  const [deleteModal, setDeleteModal] = useState<DeleteCourseModalState>({ open: false })
+  const [deleteLoading, setDeleteLoading] = useState(false)
+
+  const openDeleteModal = useCallback((schedule: Schedule) => {
+    const profName = teachers.find(t => t.id === schedule.teacher_id)?.full_name ?? '—'
+    const classeName = classes.find(c => c.id === schedule.class_id)?.name ?? '—'
+    setDeleteModal({ open: true, schedule: { ...schedule, profName, classeName } })
+  }, [teachers, classes])
+
+  const handleDeleteCourse = useCallback(async () => {
+    if (!deleteModal.schedule) return
+    const id = deleteModal.schedule.id
+    setDeleteLoading(true)
+    // Optimistic
+    setLocalSchedules(prev => prev.filter(s => s.id !== id))
+    setDeleteModal({ open: false })
+    try {
+      const res = await fetch(`/api/schedules?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json() as { error?: string }
+        throw new Error(data.error ?? 'Erreur')
+      }
+      showToast('Cours supprimé')
+    } catch (err) {
+      // Rollback
+      if (deleteModal.schedule) {
+        const { profName: _p, classeName: _c, ...orig } = deleteModal.schedule
+        setLocalSchedules(prev => [...prev, orig as Schedule])
+      }
+      const msg = err instanceof Error ? err.message : 'Veuillez réessayer.'
+      showToast(`Erreur lors de la suppression du cours — ${msg}`)
+    } finally {
+      setDeleteLoading(false)
+    }
+  }, [deleteModal, showToast])
+
+  // Escape key closes modals
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (addModal.open) setAddModal({ open: false })
+        if (deleteModal.open) setDeleteModal({ open: false })
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [addModal.open, deleteModal.open])
+
+  // ── Derived data ──
+  const isDemoMode = localSchedules.length === 0
+
   const classeNames = useMemo(
     () => classes.length > 0 ? classes.map(c => c.name) : CLASSES_EDT_DEFAULT,
     [classes]
@@ -935,24 +1271,31 @@ export default function EmploiDuTempsClient({
     [teachers]
   )
 
-  // Compute stats from real schedules if available; fall back to reference values
   const stats = useMemo(() => {
-    if (schedules.length > 0) {
-      const uniqueTeachers = new Set(schedules.map(s => s.teacher_id)).size
-      const uniqueClasses = new Set(schedules.map(s => s.class_id)).size
-      const conflicts = detectConflicts(schedules, teachers)
-      const coursTotal = schedules.length
+    if (!isDemoMode) {
+      const uniqueTeachers = new Set(localSchedules.map(s => s.teacher_id)).size
+      const uniqueClasses = new Set(localSchedules.map(s => s.class_id)).size
+      const conflicts = detectConflicts(localSchedules, teachers)
+      const coursTotal = localSchedules.length
       const maxSlots = HEURES.filter(h => h !== 'Pause' && h !== 'Déjeuner').length * JOURS.length * classeNames.length
       const couverture = maxSlots > 0 ? Math.round((coursTotal / maxSlots) * 100) : 0
       return { coursTotal, uniqueTeachers, uniqueClasses, conflictsCount: conflicts.length, couverture }
     }
-    // Demo values from reference HTML
     return { coursTotal: 84, uniqueTeachers: 12, uniqueClasses: 10, conflictsCount: 1, couverture: 92 }
-  }, [schedules, teachers, classeNames])
+  }, [localSchedules, teachers, classeNames, isDemoMode])
 
   const weekLabel = 'Semaine du 17 au 22 mars 2026'
 
-  const tabProps: TabProps = { classeNames, enseignantNames, schedules, teachers }
+  const tabProps: TabProps = {
+    classeNames,
+    enseignantNames,
+    schedules: localSchedules,
+    teachers,
+    classes,
+    isDemoMode,
+    onAddCourse: openAddModal,
+    onDeleteCourse: openDeleteModal,
+  }
 
   const renderTab = useCallback(() => {
     switch (activeTab) {
@@ -965,7 +1308,21 @@ export default function EmploiDuTempsClient({
       default:           return <TabSemaine {...tabProps} />
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, classeNames, enseignantNames, schedules, teachers])
+  }, [activeTab, classeNames, enseignantNames, localSchedules, teachers, classes, isDemoMode])
+
+  // ── Add Course Modal overlay style ──
+  const overlayStyle: React.CSSProperties = {
+    position: 'fixed', inset: 0,
+    background: 'rgba(0,0,0,0.4)',
+    zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+  }
+  const modalStyle: React.CSSProperties = {
+    background: '#fff', borderRadius: 12, padding: 28, width: '100%', maxWidth: 480,
+    boxShadow: '0 8px 40px rgba(0,0,0,0.18)', position: 'relative',
+  }
+  const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }
+  const inputStyle: React.CSSProperties = { border: '1.5px solid #d1fae5', borderRadius: 7, padding: '7px 12px', fontSize: 13, width: '100%', background: '#fff', boxSizing: 'border-box' }
+  const fieldStyle: React.CSSProperties = { marginBottom: 14 }
 
   return (
     <div style={{ padding: '20px 24px', minHeight: '100vh', background: '#e8f5ec' }}>
@@ -990,7 +1347,10 @@ export default function EmploiDuTempsClient({
             <button style={{ background: '#fff', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '7px 14px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
               📨 Envoyer
             </button>
-            <button style={{ background: '#1B4332', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+            <button
+              onClick={() => openAddModal()}
+              style={{ background: '#1B4332', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
+            >
               + Ajouter un cours
             </button>
           </div>
@@ -1056,6 +1416,136 @@ export default function EmploiDuTempsClient({
 
       {/* Tab content */}
       {renderTab()}
+
+      {/* ── Add Course Modal ── */}
+      {addModal.open && (
+        <div style={overlayStyle} onClick={() => setAddModal({ open: false })}>
+          <div style={modalStyle} onClick={e => e.stopPropagation()}>
+            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 17, fontWeight: 700, color: '#1B4332', marginBottom: 20 }}>
+              ➕ Ajouter un cours
+            </div>
+
+            {/* Matière */}
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Matière *</label>
+              <input
+                style={inputStyle}
+                type="text"
+                placeholder="Ex : Maths, Français…"
+                value={addForm.subject}
+                onChange={e => setAddForm(f => ({ ...f, subject: e.target.value }))}
+              />
+            </div>
+
+            {/* Classe */}
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Classe *</label>
+              <select style={inputStyle} value={addForm.classId} onChange={e => setAddForm(f => ({ ...f, classId: e.target.value }))}>
+                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+
+            {/* Enseignant */}
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Enseignant *</label>
+              <select style={inputStyle} value={addForm.teacherId} onChange={e => setAddForm(f => ({ ...f, teacherId: e.target.value }))}>
+                {teachers.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+              </select>
+            </div>
+
+            {/* Jour + Créneau (inline) */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Jour *</label>
+                <select style={inputStyle} value={addForm.dayOfWeek} onChange={e => setAddForm(f => ({ ...f, dayOfWeek: e.target.value }))}>
+                  {JOURS.map((j, i) => <option key={i} value={i}>{j}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Créneau *</label>
+                <select style={inputStyle} value={addForm.slotIndex} onChange={e => setAddForm(f => ({ ...f, slotIndex: e.target.value }))}>
+                  {VALID_SLOTS.map(({ h, i }) => <option key={i} value={i}>{h}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Salle */}
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Salle (optionnel)</label>
+              <input
+                style={inputStyle}
+                type="text"
+                placeholder="Ex : A12, Salle Info…"
+                value={addForm.room}
+                onChange={e => setAddForm(f => ({ ...f, room: e.target.value }))}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+              <button
+                onClick={handleAddCourse}
+                disabled={addLoading || !addForm.subject.trim() || !addForm.classId || !addForm.teacherId}
+                style={{
+                  background: '#1B4332', color: '#fff', border: 'none', borderRadius: 8,
+                  padding: '9px 22px', fontSize: 13, cursor: 'pointer', fontWeight: 600,
+                  opacity: (addLoading || !addForm.subject.trim()) ? 0.6 : 1,
+                }}
+              >
+                {addLoading ? 'Ajout…' : 'Ajouter'}
+              </button>
+              <button
+                onClick={() => setAddModal({ open: false })}
+                style={{ background: '#fff', color: '#6b7280', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '9px 18px', fontSize: 13, cursor: 'pointer' }}
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete Course Modal ── */}
+      {deleteModal.open && deleteModal.schedule && (
+        <div style={overlayStyle} onClick={() => setDeleteModal({ open: false })}>
+          <div style={{ ...modalStyle, maxWidth: 380 }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 700, color: '#991b1b', marginBottom: 16 }}>
+              🗑 Supprimer ce cours ?
+            </div>
+            <div style={{ background: '#f9fafb', borderRadius: 8, padding: '14px 16px', marginBottom: 20, border: '1px solid #e5e7eb' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#1B4332' }}>{deleteModal.schedule.subject}</div>
+              <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+                {deleteModal.schedule.classeName} · {deleteModal.schedule.profName}
+              </div>
+              <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                {JOURS[deleteModal.schedule.day_of_week]} — {HEURES[deleteModal.schedule.slot_index]}
+                {deleteModal.schedule.room ? ` · 📍 ${deleteModal.schedule.room}` : ''}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={handleDeleteCourse}
+                disabled={deleteLoading}
+                style={{
+                  background: '#dc2626', color: '#fff', border: 'none', borderRadius: 8,
+                  padding: '9px 22px', fontSize: 13, cursor: 'pointer', fontWeight: 600,
+                  opacity: deleteLoading ? 0.6 : 1,
+                }}
+              >
+                {deleteLoading ? 'Suppression…' : 'Supprimer'}
+              </button>
+              <button
+                onClick={() => setDeleteModal({ open: false })}
+                style={{ background: '#fff', color: '#6b7280', border: '1.5px solid #e5e7eb', borderRadius: 8, padding: '9px 18px', fontSize: 13, cursor: 'pointer' }}
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
     </div>
   )
 }
