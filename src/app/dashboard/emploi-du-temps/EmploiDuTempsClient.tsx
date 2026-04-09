@@ -1200,10 +1200,11 @@ export default function EmploiDuTempsClient({
       // Replace optimistic with real
       setLocalSchedules(prev => prev.map(s => s.id === optimisticId ? data.schedule! : s))
       showToast('Cours ajouté ✓')
-    } catch {
+    } catch (err) {
       // Rollback
       setLocalSchedules(prev => prev.filter(s => s.id !== optimisticId))
-      showToast('Erreur lors de l\'ajout')
+      const msg = err instanceof Error ? err.message : 'Veuillez réessayer.'
+      showToast(`Erreur lors de l'ajout du cours — ${msg}`)
     } finally {
       setAddLoading(false)
     }
@@ -1233,13 +1234,14 @@ export default function EmploiDuTempsClient({
         throw new Error(data.error ?? 'Erreur')
       }
       showToast('Cours supprimé')
-    } catch {
+    } catch (err) {
       // Rollback
       if (deleteModal.schedule) {
         const { profName: _p, classeName: _c, ...orig } = deleteModal.schedule
         setLocalSchedules(prev => [...prev, orig as Schedule])
       }
-      showToast('Erreur lors de la suppression')
+      const msg = err instanceof Error ? err.message : 'Veuillez réessayer.'
+      showToast(`Erreur lors de la suppression du cours — ${msg}`)
     } finally {
       setDeleteLoading(false)
     }
@@ -1249,13 +1251,13 @@ export default function EmploiDuTempsClient({
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setAddModal({ open: false })
-        setDeleteModal({ open: false })
+        if (addModal.open) setAddModal({ open: false })
+        if (deleteModal.open) setDeleteModal({ open: false })
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [])
+  }, [addModal.open, deleteModal.open])
 
   // ── Derived data ──
   const isDemoMode = localSchedules.length === 0
