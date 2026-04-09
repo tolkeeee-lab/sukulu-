@@ -285,6 +285,7 @@ interface TabProps {
   classeNames: string[]
   enseignantNames: string[]
   schedules: Schedule[]
+  teachers: Teacher[]
 }
 
 // ─── Tab 1: Vue Semaine ────────────────────────────────────────────────────────
@@ -417,20 +418,24 @@ function TabClasse({ classeNames }: TabProps) {
 
 // ─── Tab 3: Par Enseignant ─────────────────────────────────────────────────────
 
-function TabEnseignant({ classeNames, enseignantNames, schedules }: TabProps) {
+function TabEnseignant({ classeNames, enseignantNames, schedules, teachers }: TabProps) {
   const [selectedProf, setSelectedProf] = useState(enseignantNames[0] ?? '')
 
-  // Compute stats from real schedule data
+  // Compute stats from real schedule data when available
   const stats = useMemo(() => {
-    const profSchedules = schedules.filter(s => {
-      // Match by teacher_id name lookup or fall back to profStats
-      return true // schedules keyed by teacher_id; full_name matched in parent
-    })
-    const fromProfStats = profStats[selectedProf]
-    if (fromProfStats) return fromProfStats
-    // Fallback: 0 stats for unknown teachers
-    return { cours: 0, heures: 0, classes: 0, matieres: 0 }
-  }, [selectedProf, schedules])
+    const teacher = teachers.find(t => t.full_name === selectedProf)
+    if (teacher && schedules.length > 0) {
+      const profSchedules = schedules.filter(s => s.teacher_id === teacher.id)
+      const uniqueClasses = new Set(profSchedules.map(s => s.class_id)).size
+      const uniqueMatieres = new Set(profSchedules.map(s => s.subject)).size
+      // slot_index counts excluding pause slots (3 and 7) × 45min ≈ hours
+      const coursCount = profSchedules.length
+      const heures = Math.round(coursCount * 0.75) // ~45min per slot
+      return { cours: coursCount, heures, classes: uniqueClasses, matieres: uniqueMatieres }
+    }
+    // Fall back to hardcoded demo stats for demo teachers
+    return profStats[selectedProf] ?? { cours: 0, heures: 0, classes: 0, matieres: 0 }
+  }, [selectedProf, schedules, teachers])
 
   const edt = useMemo(() => {
     const profEdt: Array<Array<{mat: string; classe: string} | 'pause' | null>> = []
@@ -680,10 +685,10 @@ function detectConflicts(schedules: Schedule[], teachers: Teacher[]): Conflit[] 
 
 // ─── Tab 5: Conflits ──────────────────────────────────────────────────────────
 
-function TabConflits({ schedules }: TabProps & { teachers: Teacher[] }) {
-  // If real schedules exist, use them; otherwise fall back to demo data
+function TabConflits({ schedules, teachers }: TabProps) {
+  // Use real conflict detection from schedules; fall back to demo data when no schedules loaded
   const conflits: Conflit[] = useMemo(() => {
-    if (schedules.length > 0) return []
+    if (schedules.length > 0) return detectConflicts(schedules, teachers)
     // Demo data when no real schedules loaded
     return [
       {
@@ -947,7 +952,7 @@ export default function EmploiDuTempsClient({
 
   const weekLabel = 'Semaine du 17 au 22 mars 2026'
 
-  const tabProps: TabProps = { classeNames, enseignantNames, schedules }
+  const tabProps: TabProps = { classeNames, enseignantNames, schedules, teachers }
 
   const renderTab = useCallback(() => {
     switch (activeTab) {
@@ -955,7 +960,7 @@ export default function EmploiDuTempsClient({
       case 'classe':     return <TabClasse {...tabProps} />
       case 'enseignant': return <TabEnseignant {...tabProps} />
       case 'ensemble':   return <TabEnsemble {...tabProps} />
-      case 'conflits':   return <TabConflits {...tabProps} teachers={teachers} />
+      case 'conflits':   return <TabConflits {...tabProps} />
       case 'parametres': return <TabParametres />
       default:           return <TabSemaine {...tabProps} />
     }
