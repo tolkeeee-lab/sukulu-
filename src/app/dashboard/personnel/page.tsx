@@ -15,25 +15,46 @@ export default async function PersonnelPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('school_id, role, full_name')
+    .select('school_id, role, full_name, schools(name)')
     .eq('id', userId)
     .single()
 
   if (!profile?.school_id) redirect('/dashboard')
 
-  const { data: staff } = await supabase
-    .from('profiles')
-    .select('id, full_name, role, phone, momo_phone, avatar_url, is_active, created_at')
-    .eq('school_id', profile.school_id)
-    .not('role', 'in', '("parent","student")')
-    .order('role')
+  const schoolId = profile.school_id
+  const schoolsData = Array.isArray(profile.schools) ? profile.schools[0] : profile.schools
+  const schoolName = (schoolsData as { name?: string } | null)?.name ?? ''
+
+  const schoolYear = (() => {
+    const now = new Date()
+    const y = now.getFullYear()
+    return now.getMonth() + 1 >= 9 ? `${y}-${y + 1}` : `${y - 1}-${y}`
+  })()
+
+  const [staffRes, classesRes] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, full_name, role, salary, salary_paid, email, phone, created_at')
+      .eq('school_id', schoolId)
+      .in('role', ['teacher', 'director', 'accountant', 'admin'])
+      .order('role'),
+    supabase
+      .from('classes')
+      .select('id, name, teacher_id')
+      .eq('school_id', schoolId)
+      .eq('school_year', schoolYear)
+      .order('name'),
+  ])
 
   return (
     <PersonnelClient
-      schoolId={profile.school_id}
+      schoolId={schoolId}
+      schoolYear={schoolYear}
+      schoolName={schoolName}
       userId={userId}
       userRole={profile.role ?? 'teacher'}
-      staff={staff ?? []}
+      staff={staffRes.data ?? []}
+      classes={classesRes.data ?? []}
     />
   )
 }
