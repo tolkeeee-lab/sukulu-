@@ -21,9 +21,18 @@ export default async function FinancesPage() {
   const schoolId = profile?.school_id
   if (!schoolId) return <div style={{ padding: 24, color: '#dc2626' }}>École introuvable</div>
 
+  const { data: schoolData } = await supabase
+    .from('schools')
+    .select('name, school_year, annual_fee')
+    .eq('id', schoolId)
+    .single()
+
   const now = new Date()
   const y = now.getFullYear()
-  const schoolYear = now.getMonth() + 1 >= 9 ? `${y}-${y + 1}` : `${y - 1}-${y}`
+  const schoolYear = (schoolData?.school_year as string | null | undefined)
+    ?? (now.getMonth() + 1 >= 9 ? `${y}-${y + 1}` : `${y - 1}-${y}`)
+
+  const annualFee: number = (schoolData as { annual_fee?: number | null } | null)?.annual_fee ?? 150_000
 
   const [paymentsRes, staffRes] = await Promise.all([
     supabase
@@ -53,6 +62,7 @@ export default async function FinancesPage() {
     <FinancesClient
       schoolId={schoolId}
       schoolYear={schoolYear}
+      annualFee={annualFee}
       payments={(paymentsRes.data ?? []) as unknown as Parameters<typeof FinancesClient>[0]['payments']}
       staff={staffRes.data ?? []}
       budgetLines={budgetLines}
