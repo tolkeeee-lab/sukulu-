@@ -365,3 +365,11 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);
 -- Étape 5 : Le système déclenche le paiement MoMo via CinetPay
 --           → status: 'paid' + cinetpay_tx_id + paid_at = now()
 -- ============================================================
+
+-- ============================================================
+-- EXTENSIONS MODULAIRES
+-- Exécuter dans cet ordre après ce fichier :
+--   supabase/rls.sql         → Row Level Security
+--   supabase/delegations.sql → Tables de délégation
+--   supabase/seed.sql        → Données de test (dev uniquement)
+-- ============================================================
