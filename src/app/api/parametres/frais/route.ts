@@ -19,7 +19,7 @@ async function getSchoolId(userId: string): Promise<string | null> {
   return (data as { school_id: string | null } | null)?.school_id ?? null
 }
 
-// GET /api/subjects — list subjects for school (optional ?class_id filter)
+// GET /api/parametres/frais — list fee types for school
 export async function GET(req: NextRequest) {
   const headersList = await headers()
   const userId = headersList.get('x-user-id')
@@ -28,23 +28,23 @@ export async function GET(req: NextRequest) {
   const schoolId = await getSchoolId(userId)
   if (!schoolId) return NextResponse.json({ error: 'École introuvable' }, { status: 403 })
 
-  const classId = req.nextUrl.searchParams.get('class_id')
+  const schoolYear = req.nextUrl.searchParams.get('school_year')
 
   const supabase = getSupabase()
   let query = supabase
-    .from('subjects')
-    .select('id, name, coefficient, class_id, teacher_id')
+    .from('fee_types')
+    .select('id, name, amount, due_date, school_year')
     .eq('school_id', schoolId)
-    .order('name')
+    .order('school_year', { ascending: false })
 
-  if (classId) query = query.eq('class_id', classId)
+  if (schoolYear) query = query.eq('school_year', schoolYear)
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ subjects: data })
+  return NextResponse.json({ feeTypes: data })
 }
 
-// POST /api/subjects — créer une matière
+// POST /api/parametres/frais — create fee type
 export async function POST(req: NextRequest) {
   const headersList = await headers()
   const userId = headersList.get('x-user-id')
@@ -55,32 +55,33 @@ export async function POST(req: NextRequest) {
 
   const body = (await req.json()) as {
     name: string
-    coefficient: number
-    class_id: string | null
+    amount: number
+    due_date?: string | null
+    school_year: string
   }
 
-  if (!body.name || !body.coefficient || body.coefficient < 1 || body.coefficient > 9) {
-    return NextResponse.json({ error: 'Champs obligatoires manquants ou coefficient invalide (1-9)' }, { status: 400 })
+  if (!body.name || !body.amount || !body.school_year) {
+    return NextResponse.json({ error: 'Champs obligatoires manquants' }, { status: 400 })
   }
 
   const supabase = getSupabase()
   const { data, error } = await supabase
-    .from('subjects')
+    .from('fee_types')
     .insert({
       school_id: schoolId,
       name: body.name,
-      coefficient: body.coefficient,
-      class_id: body.class_id ?? null,
-      teacher_id: userId,
+      amount: body.amount,
+      due_date: body.due_date ?? null,
+      school_year: body.school_year,
     })
-    .select('id, name, coefficient, class_id, teacher_id')
+    .select('id, name, amount, due_date, school_year')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ subject: data }, { status: 201 })
+  return NextResponse.json({ feeType: data }, { status: 201 })
 }
 
-// PATCH /api/subjects?id=xxx — modifier une matière
+// PATCH /api/parametres/frais?id=xxx — update fee type
 export async function PATCH(req: NextRequest) {
   const headersList = await headers()
   const userId = headersList.get('x-user-id')
@@ -92,22 +93,27 @@ export async function PATCH(req: NextRequest) {
   const schoolId = await getSchoolId(userId)
   if (!schoolId) return NextResponse.json({ error: 'École introuvable' }, { status: 403 })
 
-  const body = (await req.json()) as Partial<{ name: string; coefficient: number }>
+  const body = (await req.json()) as Partial<{
+    name: string
+    amount: number
+    due_date: string | null
+    school_year: string
+  }>
 
   const supabase = getSupabase()
   const { data, error } = await supabase
-    .from('subjects')
+    .from('fee_types')
     .update(body)
     .eq('id', id)
     .eq('school_id', schoolId)
-    .select('id, name, coefficient, class_id, teacher_id')
+    .select('id, name, amount, due_date, school_year')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ subject: data })
+  return NextResponse.json({ feeType: data })
 }
 
-// DELETE /api/subjects?id=xxx — supprimer une matière
+// DELETE /api/parametres/frais?id=xxx — delete fee type
 export async function DELETE(req: NextRequest) {
   const headersList = await headers()
   const userId = headersList.get('x-user-id')
@@ -121,7 +127,7 @@ export async function DELETE(req: NextRequest) {
 
   const supabase = getSupabase()
   const { error } = await supabase
-    .from('subjects')
+    .from('fee_types')
     .delete()
     .eq('id', id)
     .eq('school_id', schoolId)
