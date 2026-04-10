@@ -32,7 +32,8 @@ export default async function FinancesPage() {
   const schoolYear = (schoolData?.school_year as string | null | undefined)
     ?? (now.getMonth() + 1 >= 9 ? `${y}-${y + 1}` : `${y - 1}-${y}`)
 
-  const annualFee: number = (schoolData as { annual_fee?: number | null } | null)?.annual_fee ?? 150_000
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const annualFee: number = (schoolData as any)?.annual_fee ?? 150_000
 
   const [paymentsRes, staffRes] = await Promise.all([
     supabase
