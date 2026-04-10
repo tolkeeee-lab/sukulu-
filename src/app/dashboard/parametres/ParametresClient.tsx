@@ -117,6 +117,13 @@ export default function ParametresClient(props: Props) {
     notes: false, message: true, connexion: true, calendrier: false, rapport: true,
   })
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
+  // Apparence toggles
+  const [themeSombre, setThemeSombre] = useState(false)
+  const [densiteCompacte, setDensiteCompacte] = useState(false)
+  const [grandePolice, setGrandePolice] = useState(false)
+  const [animations, setAnimations] = useState(true)
+  // Données toggles
+  const [autoBackup, setAutoBackup] = useState(true)
 
   function showToast(msg: string) {
     setToastMsg(msg)
@@ -786,7 +793,7 @@ export default function ParametresClient(props: Props) {
                     type="number"
                     style={{ ...inputStyle, width: 120, textAlign: 'right', fontFamily: 'monospace' }}
                     value={ft.amount}
-                    onChange={e => setFeeTypesLocal(prev => prev.map(f => f.id === ft.id ? { ...f, amount: parseInt(e.target.value) || 0 } : f))}
+                    onChange={e => setFeeTypesLocal(prev => prev.map(f => f.id === ft.id ? { ...f, amount: parseInt(e.target.value, 10) || 0 } : f))}
                   />
                   <span style={{ fontSize: 12, color: gris, whiteSpace: 'nowrap' }}>FCFA</span>
                   <button style={{ ...btnPrimary, padding: '6px 12px', fontSize: 12 }} disabled={saving}
@@ -932,7 +939,7 @@ export default function ParametresClient(props: Props) {
                         <input type="number" min={1} max={9}
                           style={{ ...inputStyle, width: 60, textAlign: 'center', fontFamily: 'monospace' }}
                           value={sub.coefficient}
-                          onChange={e => setSubjectsLocal(prev => prev.map(s => s.id === sub.id ? { ...s, coefficient: parseInt(e.target.value) || 1 } : s))} />
+                          onChange={e => setSubjectsLocal(prev => prev.map(s => s.id === sub.id ? { ...s, coefficient: parseInt(e.target.value, 10) || 1 } : s))} />
                       </td>
                       <td style={{ ...tdStyle, textAlign: 'center', fontFamily: 'monospace', color: gris }}>20</td>
                       <td style={tdStyle}>{cls ? cls.name : <span style={{ color: gris }}>—</span>}</td>
@@ -1052,26 +1059,23 @@ export default function ParametresClient(props: Props) {
 
         <div style={cardStyle}>
           <div style={cardTitleStyle}>⚙️ Paramètres d&apos;interface</div>
-          {[
-            { label: 'Thème sombre', desc: 'Interface en mode sombre', checked: false },
-            { label: 'Densité compacte', desc: 'Affichage plus condensé', checked: false },
-            { label: 'Grande police', desc: 'Taille de texte augmentée', checked: false },
-            { label: 'Animations', desc: 'Transitions et animations UI', checked: true },
-          ].map(({ label, desc, checked: initial }) => {
-            const [on, setOn] = useState(initial)
-            return (
-              <div key={label} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '12px 0', borderBottom: `1px solid ${grisClair}`,
-              }}>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: noir }}>{label}</div>
-                  <div style={{ fontSize: 11, color: gris }}>{desc}</div>
-                </div>
-                <Toggle checked={on} onChange={setOn} />
+          {([
+            { label: 'Thème sombre', desc: 'Interface en mode sombre', checked: themeSombre, onChange: setThemeSombre },
+            { label: 'Densité compacte', desc: 'Affichage plus condensé', checked: densiteCompacte, onChange: setDensiteCompacte },
+            { label: 'Grande police', desc: 'Taille de texte augmentée', checked: grandePolice, onChange: setGrandePolice },
+            { label: 'Animations', desc: 'Transitions et animations UI', checked: animations, onChange: setAnimations },
+          ] as Array<{ label: string; desc: string; checked: boolean; onChange: (v: boolean) => void }>).map(({ label, desc, checked, onChange }) => (
+            <div key={label} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '12px 0', borderBottom: `1px solid ${grisClair}`,
+            }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: noir }}>{label}</div>
+                <div style={{ fontSize: 11, color: gris }}>{desc}</div>
               </div>
-            )
-          })}
+              <Toggle checked={checked} onChange={onChange} />
+            </div>
+          ))}
         </div>
       </div>
     )
@@ -1168,7 +1172,6 @@ export default function ParametresClient(props: Props) {
   }
 
   function renderDonnees() {
-    const [autoBackup, setAutoBackup] = useState(true)
     return (
       <div>
         <div style={cardStyle}>
