@@ -43,6 +43,7 @@ type BudgetLine = {
 interface Props {
   schoolId: string
   schoolYear: string
+  annualFee: number
   payments: Payment[]
   staff: StaffMember[]
   budgetLines: BudgetLine[]
@@ -161,7 +162,7 @@ function Avatar({ name, size = 32 }: { name: string; size?: number }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function FinancesClient({ schoolId, schoolYear, payments: initPayments, staff: initStaff, budgetLines }: Props) {
+export default function FinancesClient({ schoolId, schoolYear, annualFee, payments: initPayments, staff: initStaff, budgetLines }: Props) {
   const isMobile = useIsMobile()
 
   // ── State ───────────────────────────────────────────────────────────────────
@@ -191,9 +192,8 @@ export default function FinancesClient({ schoolId, schoolYear, payments: initPay
   useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current) }, [])
 
   // ── Computed: Frais scolaires ────────────────────────────────────────────────
-  // Default annual fee per student — should ideally come from school configuration
-  const FRAIS_ANNUEL = 150_000
-  const FRAIS_TRIM = Math.round(FRAIS_ANNUEL / 3)
+  const FRAIS_ANNUEL = annualFee
+  const FRAIS_TRIM = Math.round(annualFee / 3)
 
   // All students from payments
   const allStudents = useMemo(() => {

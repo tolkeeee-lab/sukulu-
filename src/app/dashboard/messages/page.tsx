@@ -13,26 +13,26 @@ export default async function MessagesPage() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // 1. profile → school_id, role, school info
   const { data: profile } = await supabase
     .from('profiles')
-    .select('school_id, role, schools(name, school_year)')
+    .select('school_id, role, full_name')
     .eq('id', userId)
     .single()
 
   const schoolId = profile?.school_id
   if (!schoolId) return <div style={{ padding: 24, color: '#dc2626' }}>École introuvable</div>
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const schoolsData = profile?.schools as any
-  const schoolName: string = schoolsData?.name ?? ''
-  const schoolYear: string = schoolsData?.school_year ?? (() => {
-    const now = new Date()
-    const y = now.getFullYear()
-    return now.getMonth() + 1 >= 9 ? `${y}-${y + 1}` : `${y - 1}-${y}`
-  })()
+  const { data: schoolData } = await supabase
+    .from('schools')
+    .select('name, school_year')
+    .eq('id', schoolId)
+    .single()
 
-  // 2. Parallel fetches — gracefully handle missing messages table
+  const now = new Date()
+  const y = now.getFullYear()
+  const schoolYear = (schoolData?.school_year as string | null | undefined)
+    ?? (now.getMonth() + 1 >= 9 ? `${y}-${y + 1}` : `${y - 1}-${y}`)
+
   const [messagesRes, staffRes, classesRes] = await Promise.all([
     supabase
       .from('messages')
@@ -40,7 +40,7 @@ export default async function MessagesPage() {
       .eq('school_id', schoolId)
       .or(`sender_id.eq.${userId},recipient_id.eq.${userId},type.eq.announcement`)
       .order('created_at', { ascending: false })
-      .limit(100),
+      .limit(200),
     supabase
       .from('profiles')
       .select('id, full_name, role')
@@ -49,17 +49,18 @@ export default async function MessagesPage() {
     supabase
       .from('classes')
       .select('id, name')
-      .eq('school_id', schoolId),
+      .eq('school_id', schoolId)
+      .order('name'),
   ])
 
   return (
     <MessagesClient
       schoolId={schoolId}
       schoolYear={schoolYear}
-      schoolName={schoolName}
+      schoolName={schoolData?.name ?? ''}
       userId={userId}
       userRole={profile?.role ?? 'teacher'}
-      messages={messagesRes.data ?? []}
+      messages={(messagesRes.data ?? []) as unknown as Parameters<typeof MessagesClient>[0]['messages']}
       staff={staffRes.data ?? []}
       classes={classesRes.data ?? []}
     />
